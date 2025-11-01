@@ -228,13 +228,17 @@ Return ONLY valid JSON with this structure (no markdown, no explanations):
             total_savings = optimization.get('total_savings', {}).get('total', 0)
 
             update_query = """
-                UPDATE usage_analytics
+                UPDATE usage_analytics ua
                 SET optimization_savings = %s,
                     optimization_recommendations = %s,
                     analysis_date = CURRENT_TIMESTAMP
-                WHERE software_id = %s
-                ORDER BY analysis_date DESC
-                LIMIT 1
+                FROM (
+                    SELECT usage_id FROM usage_analytics
+                    WHERE software_id = %s
+                    ORDER BY analysis_date DESC
+                    LIMIT 1
+                ) latest
+                WHERE ua.usage_id = latest.usage_id
             """
 
             recommendations = json.dumps(optimization.get('recommendations', []))
