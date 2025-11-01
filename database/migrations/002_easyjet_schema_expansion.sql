@@ -6,7 +6,7 @@
 -- 1. COMPANY METRICS TABLE
 CREATE TABLE IF NOT EXISTS company_metrics (
     metric_id VARCHAR(50) PRIMARY KEY,
-    company_id VARCHAR(50) NOT NULL REFERENCES companies(company_id) ON DELETE CASCADE,
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     metric_category VARCHAR(100) NOT NULL,
     metric_name VARCHAR(200) NOT NULL,
     metric_value DECIMAL(15,2),
@@ -24,7 +24,7 @@ CREATE INDEX idx_company_metrics_year ON company_metrics(fiscal_year);
 -- 2. CONTACTS/EXECUTIVES TABLE
 CREATE TABLE IF NOT EXISTS contacts (
     contact_id VARCHAR(50) PRIMARY KEY,
-    company_id VARCHAR(50) NOT NULL REFERENCES companies(company_id) ON DELETE CASCADE,
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
     title VARCHAR(200),
@@ -46,7 +46,7 @@ CREATE INDEX idx_contacts_decision_maker ON contacts(is_decision_maker);
 -- 3. TECHNOLOGIES TABLE
 CREATE TABLE IF NOT EXISTS technologies (
     tech_id VARCHAR(50) PRIMARY KEY,
-    company_id VARCHAR(50) NOT NULL REFERENCES companies(company_id) ON DELETE CASCADE,
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     technology_name VARCHAR(200) NOT NULL,
     category VARCHAR(100),
     vendor VARCHAR(200),
@@ -84,7 +84,7 @@ CREATE INDEX idx_vendors_relationship ON vendors(relationship_type);
 -- 5. CONTRACTS TABLE
 CREATE TABLE IF NOT EXISTS contracts (
     contract_id VARCHAR(50) PRIMARY KEY,
-    company_id VARCHAR(50) NOT NULL REFERENCES companies(company_id) ON DELETE CASCADE,
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     vendor_id VARCHAR(50) REFERENCES vendors(vendor_id),
     contract_name VARCHAR(300) NOT NULL,
     contract_type VARCHAR(100),
@@ -108,7 +108,7 @@ CREATE INDEX idx_contracts_end_date ON contracts(end_date);
 -- 6. STRATEGIC INITIATIVES TABLE
 CREATE TABLE IF NOT EXISTS initiatives (
     initiative_id VARCHAR(50) PRIMARY KEY,
-    company_id VARCHAR(50) NOT NULL REFERENCES companies(company_id) ON DELETE CASCADE,
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     initiative_name VARCHAR(300) NOT NULL,
     category VARCHAR(100),
     status VARCHAR(50),
@@ -128,7 +128,7 @@ CREATE INDEX idx_initiatives_status ON initiatives(status);
 -- 7. OPPORTUNITIES TABLE
 CREATE TABLE IF NOT EXISTS opportunities (
     opportunity_id VARCHAR(50) PRIMARY KEY,
-    company_id VARCHAR(50) NOT NULL REFERENCES companies(company_id) ON DELETE CASCADE,
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     opportunity_name VARCHAR(300) NOT NULL,
     category VARCHAR(100),
     priority VARCHAR(50),
@@ -147,7 +147,7 @@ CREATE INDEX idx_opportunities_status ON opportunities(status);
 -- 8. PAIN POINTS TABLE
 CREATE TABLE IF NOT EXISTS pain_points (
     pain_point_id VARCHAR(50) PRIMARY KEY,
-    company_id VARCHAR(50) NOT NULL REFERENCES companies(company_id) ON DELETE CASCADE,
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     category VARCHAR(100),
     severity VARCHAR(50),
     description TEXT NOT NULL,
@@ -166,13 +166,13 @@ CREATE INDEX idx_pain_points_category ON pain_points(category);
 -- 9. INTELLIGENCE NOTES TABLE
 CREATE TABLE IF NOT EXISTS intelligence_notes (
     note_id VARCHAR(50) PRIMARY KEY,
-    company_id VARCHAR(50) NOT NULL REFERENCES companies(company_id) ON DELETE CASCADE,
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     category VARCHAR(100),
     note_date DATE,
     source VARCHAR(200),
     content TEXT NOT NULL,
     tags TEXT[],
-    author_user_id VARCHAR(50) REFERENCES users(user_id),
+    author_user_id UUID REFERENCES users(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -232,7 +232,7 @@ END $$;
 -- View: Company Overview with Key Metrics
 CREATE OR REPLACE VIEW v_company_overview AS
 SELECT
-    c.company_id,
+    c.id as company_id,
     c.company_name,
     c.industry,
     c.employee_count,
@@ -244,11 +244,11 @@ SELECT
     COUNT(DISTINCT i.initiative_id) as active_initiatives,
     COUNT(DISTINCT o.opportunity_id) as open_opportunities
 FROM companies c
-LEFT JOIN technologies t ON c.company_id = t.company_id AND t.status = 'Active'
-LEFT JOIN contacts co ON c.company_id = co.company_id
-LEFT JOIN initiatives i ON c.company_id = i.company_id AND i.status = 'Active'
-LEFT JOIN opportunities o ON c.company_id = o.company_id AND o.status != 'Closed'
-GROUP BY c.company_id, c.company_name, c.industry, c.employee_count, c.country, c.total_revenue, c.net_profit;
+LEFT JOIN technologies t ON c.id = t.company_id AND t.status = 'Active'
+LEFT JOIN contacts co ON c.id = co.company_id
+LEFT JOIN initiatives i ON c.id = i.company_id AND i.status = 'Active'
+LEFT JOIN opportunities o ON c.id = o.company_id AND o.status != 'Closed'
+GROUP BY c.id, c.company_name, c.industry, c.employee_count, c.country, c.total_revenue, c.net_profit;
 
 -- View: Contract Renewals (Next 90 Days)
 CREATE OR REPLACE VIEW v_upcoming_renewals AS
@@ -264,7 +264,7 @@ SELECT
     c.currency,
     (c.end_date - CURRENT_DATE) as days_until_renewal
 FROM contracts c
-JOIN companies co ON c.company_id = co.company_id
+JOIN companies co ON c.company_id = co.id
 LEFT JOIN vendors v ON c.vendor_id = v.vendor_id
 WHERE c.end_date IS NOT NULL
   AND c.end_date >= CURRENT_DATE
@@ -285,7 +285,7 @@ SELECT
     pp.identified_date,
     (CURRENT_DATE - pp.identified_date) as days_open
 FROM pain_points pp
-JOIN companies c ON pp.company_id = c.company_id
+JOIN companies c ON pp.company_id = c.id
 WHERE pp.resolved_date IS NULL
   AND pp.severity IN ('High', 'Critical')
 ORDER BY
