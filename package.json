@@ -1,0 +1,11 @@
+{
+  "name": "prism",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "cd prism-web && npm run dev",
+    "build": "cd prism-web && npm install && npm run build",
+    "start": "cd prism-web && npm run start",
+    "lint": "cd prism-web && npm run lint"
+  }
+}

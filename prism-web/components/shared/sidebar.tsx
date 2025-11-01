@@ -3,7 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Building2, LayoutDashboard, Settings } from "lucide-react";
+import {
+  Building2,
+  LayoutDashboard,
+  Settings,
+  Package,
+  GitCompare,
+  FileText,
+  Calendar
+} from "lucide-react";
 
 interface SidebarProps {
   type: "admin" | "company";
@@ -31,18 +39,23 @@ const companyLinks = (companyId: string) => [
   },
   {
     href: `/${companyId}/software`,
-    label: "Software",
-    icon: Building2,
+    label: "Software Inventory",
+    icon: Package,
   },
   {
     href: `/${companyId}/alternatives`,
     label: "Alternatives",
-    icon: Building2,
+    icon: GitCompare,
+  },
+  {
+    href: `/${companyId}/renewals`,
+    label: "Renewals",
+    icon: Calendar,
   },
   {
     href: `/${companyId}/reports`,
     label: "Reports",
-    icon: Building2,
+    icon: FileText,
   },
   {
     href: `/${companyId}/settings`,
