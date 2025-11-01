@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import {
   Building2,
@@ -11,7 +12,9 @@ import {
   GitCompare,
   FileText,
   Calendar,
-  BarChart3
+  BarChart3,
+  Layers,
+  Brain
 } from "lucide-react";
 
 interface SidebarProps {
@@ -54,6 +57,16 @@ const companyLinks = (companyId: string) => [
     icon: Package,
   },
   {
+    href: `/${companyId}/portfolio-map`,
+    label: "Portfolio Map",
+    icon: Layers,
+  },
+  {
+    href: `/${companyId}/analysis`,
+    label: "AI Analysis",
+    icon: Brain,
+  },
+  {
     href: `/${companyId}/alternatives`,
     label: "Alternatives",
     icon: GitCompare,
@@ -77,12 +90,42 @@ const companyLinks = (companyId: string) => [
 
 export function Sidebar({ type, companyId }: SidebarProps) {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const links = type === "admin" ? adminLinks : companyLinks(companyId || "");
+
+  // Determine home link based on user session and context
+  const getHomeLink = () => {
+    if (!session?.user) {
+      return "/";
+    }
+
+    const userRole = (session.user as any).role;
+    const userCompanySlug = (session.user as any).companySlug;
+
+    // If user is admin, go to admin dashboard
+    if (userRole === "admin") {
+      return "/admin/dashboard";
+    }
+
+    // If user is company_manager or viewer, go to their company's dashboard
+    if ((userRole === "company_manager" || userRole === "viewer")) {
+      // Prefer the current companyId (slug) from URL context, fallback to user's company slug
+      const targetCompanySlug = companyId || userCompanySlug;
+      if (targetCompanySlug) {
+        return `/${targetCompanySlug}/dashboard`;
+      }
+    }
+
+    // Default fallback
+    return "/";
+  };
+
+  const homeLink = getHomeLink();
 
   return (
     <div className="w-64 bg-prism-dark border-r border-gray-800 min-h-screen">
       <div className="p-6">
-        <Link href="/" className="flex items-center space-x-2">
+        <Link href={homeLink} className="flex items-center space-x-2">
           <div className="w-8 h-8 bg-prism-primary rounded-lg flex items-center justify-center">
             <span className="text-white font-bold">P</span>
           </div>

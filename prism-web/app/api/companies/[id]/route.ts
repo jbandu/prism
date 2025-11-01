@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions, canAccessCompany, isAdmin } from "@/lib/auth";
 import {
   getCompanyById,
+  getCompanyBySlug,
   updateCompany,
   deleteCompany,
 } from "@/lib/db-utils";
@@ -13,7 +14,7 @@ interface RouteParams {
   params: { id: string };
 }
 
-// GET /api/companies/[id] - Get company details
+// GET /api/companies/[id] - Get company details (supports both UUID and slug)
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
@@ -25,22 +26,28 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const companyId = params.id;
+    const identifier = params.id;
 
-    // Check if user has access to this company
-    if (!canAccessCompany(session.user as any, companyId)) {
-      return NextResponse.json<ApiResponse>(
-        { success: false, error: "Forbidden - Access denied" },
-        { status: 403 }
-      );
-    }
+    // Check if identifier is a UUID or slug
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
 
-    const company = await getCompanyById(companyId);
+    // Fetch company by ID or slug
+    const company = isUUID
+      ? await getCompanyById(identifier)
+      : await getCompanyBySlug(identifier);
 
     if (!company) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Company not found" },
         { status: 404 }
+      );
+    }
+
+    // Check if user has access to this company (using company.id)
+    if (!canAccessCompany(session.user as any, company.id)) {
+      return NextResponse.json<ApiResponse>(
+        { success: false, error: "Forbidden - Access denied" },
+        { status: 403 }
       );
     }
 

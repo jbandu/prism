@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,29 +16,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
-
-// Mock data - replace with real API calls
-const mockData = {
-  overview: {
-    activeClients: 2,
-    totalUnderManagement: 12400000,
-    softwareAnalyzed: 67,
-    savingsIdentified: 2100000
-  },
-  recentActivity: [
-    { time: "2 hours ago", action: "BioRad: AI analyzed Tableau - Found 3 alternatives", type: "analysis" },
-    { time: "Yesterday", action: "CoorsTek: New prospect added", type: "client" },
-    { time: "2 days ago", action: "BioRad: Cost optimization completed - $2.1M savings found", type: "savings" },
-    { time: "3 days ago", action: "System: Vendor risk data updated for 15 vendors", type: "system" }
-  ],
-  systemHealth: {
-    lastAgentRun: "12 minutes ago",
-    dbStatus: "Connected",
-    apiRateLimit: "2,450 / 5,000",
-    dbUsage: "34.2 MB / 512 MB",
-    errors: 0
-  }
-};
+import type { Company } from "@/types";
 
 const formatCurrency = (value: number) => {
   if (value >= 1000000) {
@@ -49,6 +28,40 @@ const formatCurrency = (value: number) => {
 };
 
 export default function AdminDashboard() {
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    activeClients: 0,
+    totalUnderManagement: 0,
+    softwareAnalyzed: 0,
+    savingsIdentified: 0
+  });
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/companies');
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        const companies: Company[] = result.data;
+        setStats({
+          activeClients: companies.length,
+          totalUnderManagement: 0, // TODO: Calculate from company dashboards
+          softwareAnalyzed: 0, // TODO: Calculate from software counts
+          savingsIdentified: 0 // TODO: Calculate from analyses
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6 pb-8">
       {/* Header */}
@@ -79,7 +92,7 @@ export default function AdminDashboard() {
               <Building2 className="w-5 h-5" />
               <p className="text-sm text-blue-100">Active Clients</p>
             </div>
-            <p className="text-3xl font-bold">{mockData.overview.activeClients}</p>
+            <p className="text-3xl font-bold">{loading ? "..." : stats.activeClients}</p>
           </div>
 
           <div>
@@ -87,7 +100,7 @@ export default function AdminDashboard() {
               <DollarSign className="w-5 h-5" />
               <p className="text-sm text-blue-100">Under Management</p>
             </div>
-            <p className="text-3xl font-bold">{formatCurrency(mockData.overview.totalUnderManagement)}</p>
+            <p className="text-3xl font-bold">{loading ? "..." : formatCurrency(stats.totalUnderManagement)}</p>
           </div>
 
           <div>
@@ -95,7 +108,7 @@ export default function AdminDashboard() {
               <Package className="w-5 h-5" />
               <p className="text-sm text-blue-100">Software Analyzed</p>
             </div>
-            <p className="text-3xl font-bold">{mockData.overview.softwareAnalyzed}</p>
+            <p className="text-3xl font-bold">{loading ? "..." : stats.softwareAnalyzed}</p>
           </div>
 
           <div>
@@ -103,7 +116,7 @@ export default function AdminDashboard() {
               <TrendingDown className="w-5 h-5 text-green-300" />
               <p className="text-sm text-blue-100">Savings Identified</p>
             </div>
-            <p className="text-3xl font-bold">{formatCurrency(mockData.overview.savingsIdentified)}</p>
+            <p className="text-3xl font-bold">{loading ? "..." : formatCurrency(stats.savingsIdentified)}</p>
           </div>
         </div>
       </div>
@@ -116,28 +129,9 @@ export default function AdminDashboard() {
             <CardDescription>Latest updates across all clients</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {mockData.recentActivity.map((activity, index) => (
-                <div key={index} className="flex items-start gap-3 pb-3 border-b last:border-b-0">
-                  <div className={`p-2 rounded-lg ${
-                    activity.type === 'savings' ? 'bg-green-100' :
-                    activity.type === 'analysis' ? 'bg-blue-100' :
-                    activity.type === 'client' ? 'bg-purple-100' :
-                    'bg-gray-100'
-                  }`}>
-                    <Activity className={`w-4 h-4 ${
-                      activity.type === 'savings' ? 'text-green-600' :
-                      activity.type === 'analysis' ? 'text-blue-600' :
-                      activity.type === 'client' ? 'text-purple-600' :
-                      'text-gray-600'
-                    }`} />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-xs text-gray-500">{activity.time}</p>
-                    <p className="text-sm text-gray-900 mt-1">{activity.action}</p>
-                  </div>
-                </div>
-              ))}
+            <div className="text-center py-8 text-gray-500">
+              <Activity className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p>Activity tracking coming soon</p>
             </div>
             <Link href="/admin/companies">
               <Button variant="ghost" className="w-full mt-4">
@@ -196,27 +190,27 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div>
               <p className="text-xs text-gray-500 mb-1">Last Agent Run</p>
-              <p className="text-sm font-medium text-gray-900">{mockData.systemHealth.lastAgentRun}</p>
+              <p className="text-sm font-medium text-gray-900">N/A</p>
               <Badge className="mt-1 bg-green-100 text-green-700">Active</Badge>
             </div>
             <div>
               <p className="text-xs text-gray-500 mb-1">Database Status</p>
-              <p className="text-sm font-medium text-gray-900">{mockData.systemHealth.dbStatus}</p>
+              <p className="text-sm font-medium text-gray-900">Connected</p>
               <Badge className="mt-1 bg-green-100 text-green-700">Healthy</Badge>
             </div>
             <div>
-              <p className="text-xs text-gray-500 mb-1">API Rate Limit</p>
-              <p className="text-sm font-medium text-gray-900">{mockData.systemHealth.apiRateLimit}</p>
-              <Badge className="mt-1 bg-blue-100 text-blue-700">49%</Badge>
+              <p className="text-xs text-gray-500 mb-1">Total Clients</p>
+              <p className="text-sm font-medium text-gray-900">{stats.activeClients}</p>
+              <Badge className="mt-1 bg-blue-100 text-blue-700">Live</Badge>
             </div>
             <div>
-              <p className="text-xs text-gray-500 mb-1">DB Usage</p>
-              <p className="text-sm font-medium text-gray-900">{mockData.systemHealth.dbUsage}</p>
-              <Badge className="mt-1 bg-blue-100 text-blue-700">6.7%</Badge>
+              <p className="text-xs text-gray-500 mb-1">System Status</p>
+              <p className="text-sm font-medium text-gray-900">Operational</p>
+              <Badge className="mt-1 bg-green-100 text-green-700">OK</Badge>
             </div>
             <div>
               <p className="text-xs text-gray-500 mb-1">Errors (24h)</p>
-              <p className="text-sm font-medium text-gray-900">{mockData.systemHealth.errors} errors</p>
+              <p className="text-sm font-medium text-gray-900">0 errors</p>
               <Badge className="mt-1 bg-green-100 text-green-700">Clean</Badge>
             </div>
           </div>

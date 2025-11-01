@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,8 +20,14 @@ import {
   Download,
   ArrowRight,
   TrendingUp,
-  Clock
+  Clock,
+  Upload,
+  GitCompare,
+  BarChart3,
+  Settings,
+  Sparkles
 } from "lucide-react";
+import Link from "next/link";
 import {
   PieChart,
   Pie,
@@ -38,122 +45,46 @@ import {
 } from "recharts";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-// Mock data - In production, this would come from your API
-const mockData = {
-  heroMetrics: {
-    annualSpend: 12400000,
-    savingsFound: 2100000,
-    savingsPercentage: 17,
-    totalSoftware: 67,
-    highRiskVendors: 3,
-    renewalsNext90Days: 5,
-    totalUsers: 4200
-  },
-  spendByCategory: [
-    { name: "ERP", value: 8500000, color: "#0066FF" },
-    { name: "CRM", value: 1200000, color: "#00C9A7" },
-    { name: "Collaboration", value: 772000, color: "#FF6B6B" },
-    { name: "Analytics", value: 650000, color: "#9B59B6" },
-    { name: "Security", value: 520000, color: "#F39C12" },
-    { name: "Other", value: 758000, color: "#95A5A6" }
-  ],
-  topSoftware: [
-    { name: "SAP", spend: 8500000 },
-    { name: "Salesforce", spend: 1200000 },
-    { name: "ServiceNow", spend: 950000 },
-    { name: "Tableau", spend: 650000 },
-    { name: "Zoom", spend: 420000 },
-    { name: "Slack", spend: 320000 },
-    { name: "Asana", spend: 95000 },
-    { name: "DocuSign", spend: 85000 },
-    { name: "Adobe CC", spend: 72000 },
-    { name: "Airtable", spend: 45000 }
-  ],
-  replacementOpportunities: [
-    {
-      software: "Asana",
-      currentCost: 95000,
-      alternative: "ClickUp",
-      potentialSavings: 83000,
-      savingsPercent: 87,
-      status: "Ready",
-      statusColor: "green"
-    },
-    {
-      software: "DocuSign",
-      currentCost: 85000,
-      alternative: "Adobe Sign",
-      potentialSavings: 42000,
-      savingsPercent: 49,
-      status: "Evaluation",
-      statusColor: "yellow"
-    },
-    {
-      software: "Zoom",
-      currentCost: 420000,
-      alternative: "Google Meet",
-      potentialSavings: 350000,
-      savingsPercent: 83,
-      status: "Ready",
-      statusColor: "green"
-    },
-    {
-      software: "Airtable",
-      currentCost: 45000,
-      alternative: "Microsoft Lists",
-      potentialSavings: 38000,
-      savingsPercent: 84,
-      status: "Ready",
-      statusColor: "green"
-    }
-  ],
-  costTrend: [
-    { month: "May", spend: 1050000, forecast: null },
-    { month: "Jun", spend: 1020000, forecast: null },
-    { month: "Jul", spend: 1080000, forecast: null },
-    { month: "Aug", spend: 1040000, forecast: null },
-    { month: "Sep", spend: 1100000, forecast: null },
-    { month: "Oct", spend: 1030000, forecast: null },
-    { month: "Nov", spend: null, forecast: 980000 },
-    { month: "Dec", spend: null, forecast: 950000 },
-    { month: "Jan", spend: null, forecast: 920000 },
-    { month: "Feb", spend: null, forecast: 910000 },
-    { month: "Mar", spend: null, forecast: 900000 },
-    { month: "Apr", spend: null, forecast: 890000 }
-  ],
-  riskAlerts: [
-    {
-      type: "high",
-      title: "Airtable Financial Risk",
-      description: "Vendor financial health score: 0.6 - Consider alternatives",
-      color: "red"
-    },
-    {
-      type: "medium",
-      title: "Salesforce Renewal in 45 Days",
-      description: "Contract value: $1.2M - Negotiation playbook available",
-      color: "yellow"
-    },
-    {
-      type: "low",
-      title: "Tableau License Waste Detected",
-      description: "140 unused licenses - Immediate optimization available",
-      color: "blue"
-    }
-  ],
-  recentActivity: [
-    { time: "2 hours ago", action: "AI analyzed Tableau - Found 3 alternatives" },
-    { time: "Yesterday", action: "Asana contract uploaded" },
-    { time: "2 days ago", action: "Vendor risk updated for Zoom" },
-    { time: "3 days ago", action: "Cost optimization completed for Slack" }
-  ]
-};
-
 export default function CompanyDashboard({
   params,
 }: {
   params: { companyId: string };
 }) {
+  const [loading, setLoading] = useState(true);
+  const [company, setCompany] = useState<any>(null);
+  const [software, setSoftware] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [params.companyId]);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+
+      // Fetch company details (by slug or ID)
+      const companyResponse = await fetch(`/api/companies/${params.companyId}`);
+      const companyResult = await companyResponse.json();
+
+      if (companyResult.success && companyResult.data) {
+        const fetchedCompany = companyResult.data;
+        setCompany(fetchedCompany);
+
+        // Fetch software data using the company's actual ID
+        const softwareResponse = await fetch(`/api/software?companyId=${fetchedCompany.id}`);
+        const softwareResult = await softwareResponse.json();
+
+        if (softwareResult.success) {
+          setSoftware(softwareResult.data || []);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const formatCurrency = (value: number) => {
     if (value >= 1000000) {
       return `$${(value / 1000000).toFixed(1)}M`;
@@ -167,11 +98,45 @@ export default function CompanyDashboard({
     return value.toLocaleString();
   };
 
+  // Calculate metrics from real data
+  // Note: Neon returns NUMERIC/DECIMAL as strings, so we need to parse them
+  const totalSoftware = software.length;
+  const totalAnnualSpend = software.reduce((sum, s) => sum + (parseFloat(s.total_annual_cost as any) || 0), 0);
+  const totalWaste = software.reduce((sum, s) => sum + (parseFloat(s.waste_amount as any) || 0), 0);
+  const totalSavings = software.reduce((sum, s) => sum + (parseFloat(s.potential_savings as any) || 0), 0);
+  const avgUtilization = software.length > 0
+    ? software.reduce((sum, s) => sum + (parseFloat(s.utilization_rate as any) || 0), 0) / software.length
+    : 0;
+
+  // Get software with savings opportunities
+  const savingsOpportunities = software
+    .filter(s => (parseFloat(s.potential_savings as any) || 0) > 0)
+    .sort((a, b) => (parseFloat(b.potential_savings as any) || 0) - (parseFloat(a.potential_savings as any) || 0))
+    .slice(0, 3);
+
+  // Get top spending software
+  const topSoftware = [...software]
+    .sort((a, b) => (parseFloat(b.total_annual_cost as any) || 0) - (parseFloat(a.total_annual_cost as any) || 0))
+    .slice(0, 10);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Package className="w-12 h-12 text-prism-primary mx-auto mb-4 animate-pulse" />
+          <p className="text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 pb-8">
       {/* HERO SECTION */}
       <div className="bg-gradient-to-r from-prism-primary to-prism-secondary rounded-lg p-8 text-white">
-        <h1 className="text-3xl font-bold mb-2">BioRad Laboratories - Software Portfolio</h1>
+        <h1 className="text-3xl font-bold mb-2">
+          {company?.company_name || 'Company'} - Software Portfolio
+        </h1>
         <p className="text-blue-100 mb-6">Comprehensive view of your software investments and optimization opportunities</p>
 
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
@@ -181,7 +146,7 @@ export default function CompanyDashboard({
                 <DollarSign className="w-5 h-5 text-white" />
                 <p className="text-sm text-blue-100">Annual Spend</p>
               </div>
-              <p className="text-2xl font-bold">{formatCurrency(mockData.heroMetrics.annualSpend)}</p>
+              <p className="text-2xl font-bold">{formatCurrency(totalAnnualSpend)}</p>
             </CardContent>
           </Card>
 
@@ -189,10 +154,14 @@ export default function CompanyDashboard({
             <CardContent className="pt-6">
               <div className="flex items-center gap-2 mb-2">
                 <TrendingDown className="w-5 h-5 text-green-300" />
-                <p className="text-sm text-blue-100">Savings Found</p>
+                <p className="text-sm text-blue-100">Potential Savings</p>
               </div>
-              <p className="text-2xl font-bold">{formatCurrency(mockData.heroMetrics.savingsFound)}</p>
-              <p className="text-xs text-green-300">({mockData.heroMetrics.savingsPercentage}%)</p>
+              <p className="text-2xl font-bold">{formatCurrency(totalSavings)}</p>
+              {totalAnnualSpend > 0 && (
+                <p className="text-xs text-green-300">
+                  ({((totalSavings / totalAnnualSpend) * 100).toFixed(0)}%)
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -202,7 +171,17 @@ export default function CompanyDashboard({
                 <Package className="w-5 h-5 text-white" />
                 <p className="text-sm text-blue-100">Software</p>
               </div>
-              <p className="text-2xl font-bold">{mockData.heroMetrics.totalSoftware}</p>
+              <p className="text-2xl font-bold">{totalSoftware}</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/10 border-white/20 backdrop-blur">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="w-5 h-5 text-white" />
+                <p className="text-sm text-blue-100">Avg Utilization</p>
+              </div>
+              <p className="text-2xl font-bold">{avgUtilization.toFixed(0)}%</p>
             </CardContent>
           </Card>
 
@@ -210,21 +189,9 @@ export default function CompanyDashboard({
             <CardContent className="pt-6">
               <div className="flex items-center gap-2 mb-2">
                 <AlertCircle className="w-5 h-5 text-red-300" />
-                <p className="text-sm text-blue-100">High Risk</p>
+                <p className="text-sm text-blue-100">Waste</p>
               </div>
-              <p className="text-2xl font-bold">{mockData.heroMetrics.highRiskVendors}</p>
-              <p className="text-xs text-blue-100">Vendors</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/10 border-white/20 backdrop-blur">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2 mb-2">
-                <Calendar className="w-5 h-5 text-yellow-300" />
-                <p className="text-sm text-blue-100">Renewals</p>
-              </div>
-              <p className="text-2xl font-bold">{mockData.heroMetrics.renewalsNext90Days}</p>
-              <p className="text-xs text-blue-100">Next 90 Days</p>
+              <p className="text-2xl font-bold">{formatCurrency(totalWaste)}</p>
             </CardContent>
           </Card>
 
@@ -232,279 +199,149 @@ export default function CompanyDashboard({
             <CardContent className="pt-6">
               <div className="flex items-center gap-2 mb-2">
                 <Users className="w-5 h-5 text-white" />
-                <p className="text-sm text-blue-100">Total Users</p>
+                <p className="text-sm text-blue-100">Employees</p>
               </div>
-              <p className="text-2xl font-bold">{formatNumber(mockData.heroMetrics.totalUsers)}</p>
+              <p className="text-2xl font-bold">{formatNumber(company?.employee_count || 0)}</p>
             </CardContent>
           </Card>
         </div>
       </div>
 
-      {/* INSIGHTS CARDS */}
-      <div className="grid md:grid-cols-3 gap-6">
-        <Card className="border-green-200 bg-green-50/50 hover:shadow-lg transition-shadow cursor-pointer">
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <Target className="w-8 h-8 text-green-600" />
-              <Badge className="bg-green-600">Top Opportunity</Badge>
-            </div>
-            <CardTitle className="text-xl mt-4">Replace Asana with ClickUp</CardTitle>
-            <CardDescription className="text-lg font-semibold text-green-700">
-              Save $83K annually (87% savings)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button className="w-full bg-green-600 hover:bg-green-700">
-              View Details <ArrowRight className="ml-2 w-4 h-4" />
-            </Button>
-          </CardContent>
-        </Card>
+      {/* QUICK ACTIONS */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Zap className="w-5 h-5 text-prism-primary" />
+            Quick Actions
+          </CardTitle>
+          <CardDescription>
+            Common tasks and data management operations
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <Link href={`/${params.companyId}/analysis`}>
+              <Button
+                variant="outline"
+                className="w-full h-24 flex flex-col items-center justify-center gap-2 hover:border-prism-primary hover:bg-prism-primary/5 border-2"
+              >
+                <div className="relative">
+                  <Sparkles className="w-6 h-6 text-prism-primary animate-pulse" />
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold">Run AI Analysis</p>
+                  <p className="text-xs text-gray-500">Discover insights</p>
+                </div>
+              </Button>
+            </Link>
 
-        <Card className="border-blue-200 bg-blue-50/50 hover:shadow-lg transition-shadow cursor-pointer">
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <Zap className="w-8 h-8 text-blue-600" />
-              <Badge className="bg-blue-600">Quick Win</Badge>
-            </div>
-            <CardTitle className="text-xl mt-4">Right-size Tableau licenses</CardTitle>
-            <CardDescription className="text-lg font-semibold text-blue-700">
-              Remove 140 unused licenses<br />Save $168K immediately
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button className="w-full bg-blue-600 hover:bg-blue-700">
-              Optimize Now <ArrowRight className="ml-2 w-4 h-4" />
-            </Button>
-          </CardContent>
-        </Card>
+            <Link href={`/${params.companyId}/import`}>
+              <Button
+                variant="outline"
+                className="w-full h-24 flex flex-col items-center justify-center gap-2 hover:border-green-500 hover:bg-green-50"
+              >
+                <Upload className="w-6 h-6 text-green-600" />
+                <div className="text-center">
+                  <p className="font-semibold">Import CSV</p>
+                  <p className="text-xs text-gray-500">Upload software data</p>
+                </div>
+              </Button>
+            </Link>
 
-        <Card className="border-orange-200 bg-orange-50/50 hover:shadow-lg transition-shadow cursor-pointer">
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <Bell className="w-8 h-8 text-orange-600" />
-              <Badge className="bg-orange-600">Action Required</Badge>
-            </div>
-            <CardTitle className="text-xl mt-4">Salesforce renews in 45 days</CardTitle>
-            <CardDescription className="text-lg font-semibold text-orange-700">
-              Negotiate 20% discount<br />Playbook ready
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button className="w-full bg-orange-600 hover:bg-orange-700">
-              View Strategy <ArrowRight className="ml-2 w-4 h-4" />
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+            <Link href={`/${params.companyId}/alternatives`}>
+              <Button
+                variant="outline"
+                className="w-full h-24 flex flex-col items-center justify-center gap-2 hover:border-purple-500 hover:bg-purple-50"
+              >
+                <GitCompare className="w-6 h-6 text-purple-600" />
+                <div className="text-center">
+                  <p className="font-semibold">Find Alternatives</p>
+                  <p className="text-xs text-gray-500">Discover savings</p>
+                </div>
+              </Button>
+            </Link>
 
-      {/* PORTFOLIO BREAKDOWN */}
-      <div className="grid lg:grid-cols-2 gap-6">
+            <Link href={`/${params.companyId}/renewals`}>
+              <Button
+                variant="outline"
+                className="w-full h-24 flex flex-col items-center justify-center gap-2 hover:border-orange-500 hover:bg-orange-50"
+              >
+                <Calendar className="w-6 h-6 text-orange-600" />
+                <div className="text-center">
+                  <p className="font-semibold">Manage Renewals</p>
+                  <p className="text-xs text-gray-500">Track contracts</p>
+                </div>
+              </Button>
+            </Link>
+
+            <Link href={`/${params.companyId}/reports`}>
+              <Button
+                variant="outline"
+                className="w-full h-24 flex flex-col items-center justify-center gap-2 hover:border-blue-500 hover:bg-blue-50"
+              >
+                <FileText className="w-6 h-6 text-blue-600" />
+                <div className="text-center">
+                  <p className="font-semibold">Generate Report</p>
+                  <p className="text-xs text-gray-500">Export insights</p>
+                </div>
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* TOP OPPORTUNITIES */}
+      {savingsOpportunities.length > 0 && (
+        <div className="grid md:grid-cols-3 gap-6">
+          {savingsOpportunities.map((software, index) => (
+            <Card
+              key={software.software_id}
+              className={`border-${index === 0 ? 'green' : index === 1 ? 'blue' : 'orange'}-200 bg-${index === 0 ? 'green' : index === 1 ? 'blue' : 'orange'}-50/50 hover:shadow-lg transition-shadow cursor-pointer`}
+            >
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  {index === 0 ? <Target className="w-8 h-8 text-green-600" /> :
+                   index === 1 ? <Zap className="w-8 h-8 text-blue-600" /> :
+                   <Bell className="w-8 h-8 text-orange-600" />}
+                  <Badge className={`bg-${index === 0 ? 'green' : index === 1 ? 'blue' : 'orange'}-600`}>
+                    {index === 0 ? 'Top Opportunity' : index === 1 ? 'Quick Win' : 'Action Required'}
+                  </Badge>
+                </div>
+                <CardTitle className="text-xl mt-4">{software.software_name}</CardTitle>
+                <CardDescription className={`text-lg font-semibold text-${index === 0 ? 'green' : index === 1 ? 'blue' : 'orange'}-700`}>
+                  Save {formatCurrency(software.potential_savings || 0)}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button className={`w-full bg-${index === 0 ? 'green' : index === 1 ? 'blue' : 'orange'}-600 hover:bg-${index === 0 ? 'green' : index === 1 ? 'blue' : 'orange'}-700`}>
+                  View Details <ArrowRight className="ml-2 w-4 h-4" />
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* TOP SOFTWARE BY SPEND */}
+      {topSoftware.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Spend by Category</CardTitle>
-            <CardDescription>Distribution of annual software spend</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={mockData.spendByCategory}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {mockData.spendByCategory.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value: number) => formatCurrency(value)} />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Top 10 Software by Spend</CardTitle>
+            <CardTitle>Top Software by Spend</CardTitle>
             <CardDescription>Largest cost drivers in your portfolio</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={mockData.topSoftware} layout="vertical">
+              <BarChart data={topSoftware} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" tickFormatter={formatCurrency} />
-                <YAxis dataKey="name" type="category" width={100} />
+                <YAxis dataKey="software_name" type="category" width={150} />
                 <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                <Bar dataKey="spend" fill="#0066FF" />
+                <Bar dataKey="total_annual_cost" fill="#0066FF" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
-      </div>
-
-      {/* REPLACEMENT OPPORTUNITIES */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Replacement Opportunities</CardTitle>
-              <CardDescription>AI-identified alternatives with significant savings potential</CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm">All</Button>
-              <Button variant="outline" size="sm">Quick Wins</Button>
-              <Button variant="outline" size="sm">Evaluation</Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Software</TableHead>
-                <TableHead>Current Cost</TableHead>
-                <TableHead>Alternative</TableHead>
-                <TableHead>Potential Savings</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {mockData.replacementOpportunities.map((opp) => (
-                <TableRow key={opp.software} className="cursor-pointer hover:bg-gray-50">
-                  <TableCell className="font-medium">{opp.software}</TableCell>
-                  <TableCell>{formatCurrency(opp.currentCost)}</TableCell>
-                  <TableCell>{opp.alternative}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-green-600">
-                        {formatCurrency(opp.potentialSavings)}
-                      </span>
-                      <span className="text-xs text-gray-500">({opp.savingsPercent}%)</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      className={
-                        opp.statusColor === "green"
-                          ? "bg-green-100 text-green-700 hover:bg-green-200"
-                          : "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
-                      }
-                    >
-                      {opp.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="sm">
-                      Review <ArrowRight className="ml-1 w-3 h-3" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* COST TREND */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Cost Trend & Forecast</CardTitle>
-          <CardDescription>Monthly spend with 6-month forecast (showing potential savings if opportunities implemented)</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={mockData.costTrend}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis tickFormatter={formatCurrency} />
-              <Tooltip formatter={(value: number) => formatCurrency(value)} />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="spend"
-                stroke="#0066FF"
-                strokeWidth={2}
-                name="Actual Spend"
-                dot={{ fill: '#0066FF' }}
-              />
-              <Line
-                type="monotone"
-                dataKey="forecast"
-                stroke="#00C9A7"
-                strokeWidth={2}
-                strokeDasharray="5 5"
-                name="Forecast (With Savings)"
-                dot={{ fill: '#00C9A7' }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      {/* RISK ALERTS & RECENT ACTIVITY */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Risk Alerts</CardTitle>
-            <CardDescription>Items requiring attention</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {mockData.riskAlerts.map((alert, index) => (
-              <div
-                key={index}
-                className={`p-4 rounded-lg border-l-4 cursor-pointer hover:bg-gray-50 transition-colors ${
-                  alert.color === "red"
-                    ? "bg-red-50 border-red-500"
-                    : alert.color === "yellow"
-                    ? "bg-yellow-50 border-yellow-500"
-                    : "bg-blue-50 border-blue-500"
-                }`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-gray-900">{alert.title}</h4>
-                    <p className="text-sm text-gray-600 mt-1">{alert.description}</p>
-                  </div>
-                  <AlertCircle
-                    className={`w-5 h-5 ${
-                      alert.color === "red"
-                        ? "text-red-500"
-                        : alert.color === "yellow"
-                        ? "text-yellow-500"
-                        : "text-blue-500"
-                    }`}
-                  />
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Latest updates and analyses</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {mockData.recentActivity.map((activity, index) => (
-                <div key={index} className="flex items-start gap-3 pb-3 border-b last:border-b-0">
-                  <Clock className="w-4 h-4 text-gray-400 mt-1" />
-                  <div className="flex-1">
-                    <p className="text-xs text-gray-500">{activity.time}</p>
-                    <p className="text-sm text-gray-900 mt-1">{activity.action}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      )}
 
       {/* QUICK ACTIONS */}
       <Card>
@@ -537,6 +374,24 @@ export default function CompanyDashboard({
           </div>
         </CardContent>
       </Card>
+
+      {software.length === 0 && (
+        <Card>
+          <CardContent className="pt-12 pb-12">
+            <div className="text-center">
+              <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No software data yet</h3>
+              <p className="text-gray-600 mb-6">
+                Add your software inventory to start tracking and optimizing your spend
+              </p>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Your First Software
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

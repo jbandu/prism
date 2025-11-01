@@ -1,10 +1,9 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  LineChart,
-  Line,
   BarChart,
   Bar,
   PieChart,
@@ -14,66 +13,9 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer
 } from "recharts";
-import { TrendingUp, TrendingDown, Users, DollarSign, Package, Activity } from "lucide-react";
-
-// Mock data for analytics
-const portfolioValueOverTime = [
-  { month: "Jan", value: 8200000 },
-  { month: "Feb", value: 8800000 },
-  { month: "Mar", value: 9400000 },
-  { month: "Apr", value: 10200000 },
-  { month: "May", value: 11100000 },
-  { month: "Jun", value: 12400000 }
-];
-
-const savingsDelivered = [
-  { month: "Jan", savings: 180000 },
-  { month: "Feb", savings: 220000 },
-  { month: "Mar", savings: 340000 },
-  { month: "Apr", savings: 480000 },
-  { month: "May", savings: 680000 },
-  { month: "Jun", savings: 850000 }
-];
-
-const clientAcquisition = [
-  { stage: "Leads", count: 45, color: "#0066FF" },
-  { stage: "Qualified", count: 18, color: "#00C9A7" },
-  { stage: "Proposal", count: 8, color: "#9B59B6" },
-  { stage: "Negotiation", count: 4, color: "#F39C12" },
-  { stage: "Closed", count: 2, color: "#27AE60" }
-];
-
-const softwareCategories = [
-  { name: "ERP", count: 15, color: "#0066FF" },
-  { name: "CRM", count: 12, color: "#00C9A7" },
-  { name: "Collaboration", count: 18, color: "#FF6B6B" },
-  { name: "Analytics", count: 8, color: "#9B59B6" },
-  { name: "Security", count: 10, color: "#F39C12" },
-  { name: "Other", count: 4, color: "#95A5A6" }
-];
-
-const topVendors = [
-  { name: "Microsoft", frequency: 24 },
-  { name: "Salesforce", frequency: 18 },
-  { name: "Oracle", frequency: 15 },
-  { name: "SAP", frequency: 12 },
-  { name: "Adobe", frequency: 10 },
-  { name: "Atlassian", frequency: 8 },
-  { name: "Zoom", frequency: 7 },
-  { name: "Slack", frequency: 6 }
-];
-
-const agentActivity = [
-  { week: "Week 1", analyses: 12 },
-  { week: "Week 2", analyses: 18 },
-  { week: "Week 3", analyses: 15 },
-  { week: "Week 4", analyses: 24 },
-  { week: "Week 5", analyses: 21 },
-  { week: "Week 6", analyses: 28 }
-];
+import { TrendingUp, DollarSign, Users, Package, Activity } from "lucide-react";
 
 const formatCurrency = (value: number) => {
   if (value >= 1000000) {
@@ -81,16 +23,115 @@ const formatCurrency = (value: number) => {
   } else if (value >= 1000) {
     return `$${(value / 1000).toFixed(0)}K`;
   }
-  return `$${value}`;
+  return `$${value.toFixed(0)}`;
 };
 
 export default function AnalyticsPage() {
+  const [loading, setLoading] = useState(true);
+  const [analytics, setAnalytics] = useState<any>({
+    totalClients: 0,
+    totalSoftware: 0,
+    totalSpend: 0,
+    totalSavings: 0,
+    categories: [],
+    vendors: [],
+  });
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, []);
+
+  const fetchAnalytics = async () => {
+    try {
+      setLoading(true);
+
+      // Fetch companies
+      const companiesRes = await fetch('/api/companies');
+      const companiesData = await companiesRes.json();
+      const companies = companiesData.success ? companiesData.data : [];
+
+      // Fetch all software across all companies
+      const softwarePromises = companies.map((c: any) =>
+        fetch(`/api/software?companyId=${c.company_id}`).then(r => r.json())
+      );
+      const softwareResults = await Promise.all(softwarePromises);
+
+      const allSoftware = softwareResults
+        .filter(r => r.success)
+        .flatMap(r => r.data || []);
+
+      // Calculate metrics
+      // Note: Neon returns NUMERIC/DECIMAL as strings, so we need to parse them
+      const totalSpend = allSoftware.reduce((sum, s) => sum + (parseFloat(s.total_annual_cost) || 0), 0);
+      const totalSavings = allSoftware.reduce((sum, s) => sum + (parseFloat(s.potential_savings) || 0), 0);
+
+      // Group by category
+      const categoryMap = new Map();
+      allSoftware.forEach((s: any) => {
+        const cat = s.category || 'Other';
+        const existing = categoryMap.get(cat) || { name: cat, count: 0, spend: 0 };
+        categoryMap.set(cat, {
+          name: cat,
+          count: existing.count + 1,
+          spend: existing.spend + (parseFloat(s.total_annual_cost) || 0)
+        });
+      });
+      const categories = Array.from(categoryMap.values())
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 6);
+
+      // Group by vendor
+      const vendorMap = new Map();
+      allSoftware.forEach((s: any) => {
+        const vendor = s.vendor_name || 'Unknown';
+        const existing = vendorMap.get(vendor) || { name: vendor, frequency: 0, spend: 0 };
+        vendorMap.set(vendor, {
+          name: vendor,
+          frequency: existing.frequency + 1,
+          spend: existing.spend + (parseFloat(s.total_annual_cost) || 0)
+        });
+      });
+      const vendors = Array.from(vendorMap.values())
+        .sort((a, b) => b.frequency - a.frequency)
+        .slice(0, 8);
+
+      setAnalytics({
+        totalClients: companies.length,
+        totalSoftware: allSoftware.length,
+        totalSpend,
+        totalSavings,
+        categories,
+        vendors,
+      });
+
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const categoryColors = [
+    "#0066FF", "#00C9A7", "#FF6B6B", "#9B59B6", "#F39C12", "#95A5A6"
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Activity className="w-12 h-12 text-prism-primary mx-auto mb-4 animate-pulse" />
+          <p className="text-gray-600">Loading analytics...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 pb-8">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-prism-dark">Platform Analytics</h1>
-        <p className="text-gray-600 mt-2">Comprehensive insights and performance metrics</p>
+        <p className="text-gray-600 mt-2">Real-time insights from your Neon database</p>
       </div>
 
       {/* Key Metrics */}
@@ -101,25 +142,27 @@ export default function AnalyticsPage() {
             <DollarSign className="w-5 h-5 text-prism-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-prism-dark">$12.4M</div>
-            <div className="flex items-center gap-1 mt-2">
-              <TrendingUp className="w-4 h-4 text-green-600" />
-              <p className="text-sm text-green-600">+51% from last month</p>
+            <div className="text-3xl font-bold text-prism-dark">
+              {formatCurrency(analytics.totalSpend)}
             </div>
+            <p className="text-sm text-gray-600 mt-2">Across all clients</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Savings Delivered</CardTitle>
-            <TrendingDown className="w-5 h-5 text-green-600" />
+            <CardTitle className="text-sm font-medium text-gray-600">Potential Savings</CardTitle>
+            <TrendingUp className="w-5 h-5 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-prism-dark">$2.1M</div>
-            <div className="flex items-center gap-1 mt-2">
-              <TrendingUp className="w-4 h-4 text-green-600" />
-              <p className="text-sm text-green-600">+25% this month</p>
+            <div className="text-3xl font-bold text-green-600">
+              {formatCurrency(analytics.totalSavings)}
             </div>
+            <p className="text-sm text-gray-600 mt-2">
+              {analytics.totalSpend > 0
+                ? `${((analytics.totalSavings / analytics.totalSpend) * 100).toFixed(1)}% potential savings`
+                : 'No data yet'}
+            </p>
           </CardContent>
         </Card>
 
@@ -129,23 +172,23 @@ export default function AnalyticsPage() {
             <Users className="w-5 h-5 text-prism-secondary" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-prism-dark">2</div>
-            <div className="flex items-center gap-1 mt-2">
-              <p className="text-sm text-gray-600">4 prospects in pipeline</p>
+            <div className="text-3xl font-bold text-prism-dark">
+              {analytics.totalClients}
             </div>
+            <p className="text-sm text-gray-600 mt-2">Companies in database</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Software Analyzed</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">Software Assets</CardTitle>
             <Package className="w-5 h-5 text-prism-accent" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-prism-dark">67</div>
-            <div className="flex items-center gap-1 mt-2">
-              <p className="text-sm text-gray-600">Across all clients</p>
+            <div className="text-3xl font-bold text-prism-dark">
+              {analytics.totalSoftware}
             </div>
+            <p className="text-sm text-gray-600 mt-2">Across all clients</p>
           </CardContent>
         </Card>
       </div>
@@ -154,49 +197,59 @@ export default function AnalyticsPage() {
       <div className="grid lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Portfolio Value Over Time</CardTitle>
-            <CardDescription>Total value under management growth</CardDescription>
+            <CardTitle>Software Categories</CardTitle>
+            <CardDescription>Distribution by category ({analytics.categories.length} categories)</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={portfolioValueOverTime}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis tickFormatter={formatCurrency} />
-                <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                <Line
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#0066FF"
-                  strokeWidth={2}
-                  dot={{ fill: '#0066FF', r: 4 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            {analytics.categories.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={analytics.categories}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, count }) => `${name} (${count})`}
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="count"
+                  >
+                    {analytics.categories.map((entry: any, index: number) => (
+                      <Cell key={`cell-${index}`} fill={categoryColors[index % categoryColors.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-gray-500">
+                <p>No category data available</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Cumulative Savings Delivered</CardTitle>
-            <CardDescription>Total savings identified by month</CardDescription>
+            <CardTitle>Category Spend Distribution</CardTitle>
+            <CardDescription>Annual spend by category</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={savingsDelivered}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis tickFormatter={formatCurrency} />
-                <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                <Line
-                  type="monotone"
-                  dataKey="savings"
-                  stroke="#00C9A7"
-                  strokeWidth={2}
-                  dot={{ fill: '#00C9A7', r: 4 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            {analytics.categories.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={analytics.categories}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis tickFormatter={formatCurrency} />
+                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                  <Bar dataKey="spend" fill="#0066FF" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-gray-500">
+                <p>No spend data available</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -205,128 +258,94 @@ export default function AnalyticsPage() {
       <div className="grid lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Client Acquisition Funnel</CardTitle>
-            <CardDescription>Pipeline from leads to closed deals</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={clientAcquisition} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="stage" type="category" width={100} />
-                <Tooltip />
-                <Bar dataKey="count" fill="#0066FF">
-                  {clientAcquisition.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Software Categories Analyzed</CardTitle>
-            <CardDescription>Distribution by category</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={softwareCategories}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, count }) => `${name} (${count})`}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="count"
-                >
-                  {softwareCategories.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts Row 3 */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
             <CardTitle>Top Vendors by Frequency</CardTitle>
-            <CardDescription>Most common vendors across clients</CardDescription>
+            <CardDescription>Most common vendors across all clients</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={topVendors}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="frequency" fill="#0066FF" />
-              </BarChart>
-            </ResponsiveContainer>
+            {analytics.vendors.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={analytics.vendors}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="frequency" fill="#0066FF" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-gray-500">
+                <p>No vendor data available</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>AI Agent Analysis Activity</CardTitle>
-            <CardDescription>Weekly analysis completions</CardDescription>
+            <CardTitle>Vendor Spend Analysis</CardTitle>
+            <CardDescription>Total spend by vendor</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={agentActivity}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="week" />
-                <YAxis />
-                <Tooltip />
-                <Line
-                  type="monotone"
-                  dataKey="analyses"
-                  stroke="#9B59B6"
-                  strokeWidth={2}
-                  dot={{ fill: '#9B59B6', r: 4 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            {analytics.vendors.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={analytics.vendors}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                  <YAxis tickFormatter={formatCurrency} />
+                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                  <Bar dataKey="spend" fill="#00C9A7" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-gray-500">
+                <p>No vendor spend data available</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Engagement Metrics */}
+      {/* Summary Stats */}
       <Card>
         <CardHeader>
-          <CardTitle>Email Engagement Rates</CardTitle>
-          <CardDescription>Client communication metrics</CardDescription>
+          <CardTitle>Portfolio Summary</CardTitle>
+          <CardDescription>Aggregated metrics from live database</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid md:grid-cols-4 gap-4">
-            <div className="text-center p-4 border rounded-lg">
-              <div className="text-3xl font-bold text-prism-dark">156</div>
-              <div className="text-sm text-gray-600 mt-1">Emails Sent</div>
-              <Badge className="mt-2 bg-blue-100 text-blue-700">This Month</Badge>
+          <div className="grid md:grid-cols-3 gap-4">
+            <div className="text-center p-4 border rounded-lg bg-blue-50">
+              <div className="text-3xl font-bold text-prism-dark">{analytics.totalClients}</div>
+              <div className="text-sm text-gray-600 mt-1">Total Clients</div>
+              <Badge className="mt-2 bg-blue-100 text-blue-700">Live Data</Badge>
             </div>
-            <div className="text-center p-4 border rounded-lg">
-              <div className="text-3xl font-bold text-green-600">68%</div>
-              <div className="text-sm text-gray-600 mt-1">Open Rate</div>
-              <Badge className="mt-2 bg-green-100 text-green-700">+5% vs avg</Badge>
+            <div className="text-center p-4 border rounded-lg bg-green-50">
+              <div className="text-3xl font-bold text-prism-dark">{analytics.totalSoftware}</div>
+              <div className="text-sm text-gray-600 mt-1">Software Assets</div>
+              <Badge className="mt-2 bg-green-100 text-green-700">Tracked</Badge>
             </div>
-            <div className="text-center p-4 border rounded-lg">
-              <div className="text-3xl font-bold text-prism-secondary">42%</div>
-              <div className="text-sm text-gray-600 mt-1">Click Rate</div>
-              <Badge className="mt-2 bg-teal-100 text-teal-700">+8% vs avg</Badge>
+            <div className="text-center p-4 border rounded-lg bg-purple-50">
+              <div className="text-3xl font-bold text-prism-dark">
+                {analytics.categories.length}
+              </div>
+              <div className="text-sm text-gray-600 mt-1">Software Categories</div>
+              <Badge className="mt-2 bg-purple-100 text-purple-700">Analyzed</Badge>
             </div>
-            <div className="text-center p-4 border rounded-lg">
-              <div className="text-3xl font-bold text-orange-600">12</div>
-              <div className="text-sm text-gray-600 mt-1">Responses</div>
-              <Badge className="mt-2 bg-orange-100 text-orange-700">8% rate</Badge>
-            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Coming Soon Notice */}
+      <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+        <CardContent className="pt-6">
+          <div className="text-center">
+            <Activity className="w-12 h-12 text-prism-primary mx-auto mb-3" />
+            <h3 className="text-lg font-semibold text-prism-dark mb-2">
+              Advanced Analytics Coming Soon
+            </h3>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              Time-series tracking, email engagement metrics, AI agent activity logs, and client acquisition
+              funnel will be available once we start collecting historical data and usage analytics.
+            </p>
           </div>
         </CardContent>
       </Card>

@@ -21,7 +21,15 @@ export async function getCompanies(): Promise<Company[]> {
 export async function getCompanyById(companyId: string): Promise<Company | null> {
   const result = await sql`
     SELECT * FROM companies
-    WHERE company_id = ${companyId}
+    WHERE id = ${companyId}
+  `;
+  return result[0] as Company || null;
+}
+
+export async function getCompanyBySlug(slug: string): Promise<Company | null> {
+  const result = await sql`
+    SELECT * FROM companies
+    WHERE slug = ${slug}
   `;
   return result[0] as Company || null;
 }
@@ -68,7 +76,7 @@ export async function updateCompany(
   const result = await sql`
     UPDATE companies
     SET ${sql(updates.join(', '))}
-    WHERE company_id = ${companyId}
+    WHERE id = ${companyId}
     RETURNING *
   `;
 
@@ -79,7 +87,7 @@ export async function deleteCompany(companyId: string): Promise<boolean> {
   try {
     await sql`
       DELETE FROM companies
-      WHERE company_id = ${companyId}
+      WHERE id = ${companyId}
     `;
     return true;
   } catch (error) {
@@ -287,7 +295,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
 export async function getUserById(userId: string): Promise<User | null> {
   const result = await sql`
     SELECT * FROM users
-    WHERE user_id = ${userId}
+    WHERE id = ${userId}
   `;
   return result[0] as User || null;
 }
@@ -314,7 +322,7 @@ export async function updateUserLastLogin(userId: string): Promise<void> {
   await sql`
     UPDATE users
     SET last_login = NOW()
-    WHERE user_id = ${userId}
+    WHERE id = ${userId}
   `;
 }
 

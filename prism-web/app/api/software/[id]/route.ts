@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions, canAccessCompany, canModify } from "@/lib/auth";
+import { sql } from "@/lib/db";
 import {
   getSoftwareById,
   updateSoftware,
@@ -125,7 +126,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// DELETE /api/software/[id] - Delete software
+// DELETE /api/software/[id] - Delete/Retire software
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
@@ -163,6 +164,48 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    // Get retirement metadata from request body
+    let prismAssisted = false;
+    let savings = 0;
+
+    try {
+      const body = await request.json();
+      prismAssisted = body.prismAssisted || false;
+      savings = body.savings || 0;
+    } catch (e) {
+      // Body is optional for backward compatibility
+    }
+
+    // If PRISM assisted, log the savings
+    if (prismAssisted && savings > 0) {
+      try {
+        await sql`
+          INSERT INTO prism_savings_log (
+            company_id,
+            software_id,
+            software_name,
+            vendor_name,
+            annual_savings,
+            savings_type,
+            identified_by,
+            created_at
+          ) VALUES (
+            ${existingSoftware.company_id},
+            ${softwareId},
+            ${existingSoftware.software_name},
+            ${existingSoftware.vendor_name},
+            ${savings},
+            'retirement',
+            'prism',
+            NOW()
+          )
+        `;
+      } catch (error) {
+        console.error("Error logging PRISM savings:", error);
+        // Continue with deletion even if logging fails
+      }
+    }
+
     const success = await deleteSoftware(softwareId);
 
     if (!success) {
@@ -174,7 +217,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json<ApiResponse>({
       success: true,
-      message: "Software deleted successfully",
+      data: {
+        prismAssisted,
+        savings,
+      },
+      message: "Software retired successfully",
     });
   } catch (error) {
     console.error("Error deleting software:", error);

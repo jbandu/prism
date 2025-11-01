@@ -1,26 +1,41 @@
 export interface Company {
-  company_id: string;
+  id: string;
   company_name: string;
+  slug: string;
   industry: string;
   employee_count: number;
+  headquarters_location?: string;
+  primary_contact_name?: string;
+  primary_contact_email?: string;
+  primary_contact_phone?: string;
+  contract_status?: string;
+  total_software_count?: number;
+  total_annual_software_spend?: number;
+  total_savings_identified?: number;
   created_at: Date;
+  updated_at?: Date;
 }
 
 export interface Software {
-  software_id: string;
+  id: string;
+  software_id?: string; // Legacy field, use id
   company_id: string;
   software_name: string;
   vendor_name: string;
   category: string;
-  total_annual_cost: number;
+  total_annual_cost: number | string; // Neon returns NUMERIC as string
   total_licenses: number;
   active_users: number;
-  utilization_rate: number;
+  utilization_rate: number | string; // Neon returns NUMERIC as string
   license_type: string;
   renewal_date: Date;
-  contract_status: string;
-  waste_amount?: number;
-  potential_savings?: number;
+  contract_status?: string; // Optional, may not be set for all records
+  waste_amount?: number | string; // Optional, Neon returns NUMERIC as string
+  potential_savings?: number | string; // Optional, Neon returns NUMERIC as string
+  cost_per_user?: number | string; // Neon returns NUMERIC as string
+  contract_start_date?: Date;
+  contract_end_date?: Date;
+  days_to_renewal?: number;
 }
 
 export interface UsageAnalytics {
@@ -109,7 +124,7 @@ export type AnalysisType = "cost_optimization" | "alternative_discovery" | "vend
 
 // User model
 export interface User {
-  user_id: string;
+  id: string;
   email: string;
   password_hash: string;
   full_name: string;

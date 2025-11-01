@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,7 @@ import {
   Clock
 } from "lucide-react";
 import Link from "next/link";
+import type { Company } from "@/types";
 
 interface Client {
   id: string;
@@ -39,36 +40,6 @@ interface Client {
   employees: number;
 }
 
-// Mock data
-const mockClients: Client[] = [
-  {
-    id: "biorad",
-    company: "BioRad Laboratories",
-    contact: "Muhammad Hanif",
-    email: "mhanif@bio-rad.com",
-    status: "active",
-    software: 67,
-    annualSpend: 12400000,
-    savings: 2100000,
-    lastActive: "2 hrs ago",
-    industry: "Life Sciences",
-    employees: 4200
-  },
-  {
-    id: "coorstek",
-    company: "CoorsTek",
-    contact: "Ryan Reed",
-    email: "ryan.reed@coorstek.com",
-    status: "prospect",
-    software: 0,
-    annualSpend: 0,
-    savings: 0,
-    lastActive: "Never",
-    industry: "Manufacturing",
-    employees: 6000
-  }
-];
-
 const formatCurrency = (value: number) => {
   if (value === 0) return "$0";
   if (value >= 1000000) {
@@ -80,7 +51,8 @@ const formatCurrency = (value: number) => {
 };
 
 export default function CompaniesPage() {
-  const [clients, setClients] = useState<Client[]>(mockClients);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "prospect" | "churned">("all");
   const [sortBy, setSortBy] = useState<"name" | "spend" | "savings" | "lastActive">("name");
@@ -88,6 +60,42 @@ export default function CompaniesPage() {
   const [showClientDetail, setShowClientDetail] = useState(false);
   const [showAddClient, setShowAddClient] = useState(false);
   const [addClientStep, setAddClientStep] = useState(1);
+
+  // Fetch companies from API
+  useEffect(() => {
+    fetchCompanies();
+  }, []);
+
+  const fetchCompanies = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/companies');
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        // Transform Company data to Client format
+        // Note: Neon returns NUMERIC/DECIMAL as strings, so we need to parse them
+        const transformedClients: Client[] = result.data.map((company: Company) => ({
+          id: company.slug, // Use slug for URL routing
+          company: company.company_name,
+          contact: company.primary_contact_name || "N/A",
+          email: company.primary_contact_email || "N/A",
+          status: (company.contract_status || "active") as "active" | "prospect" | "churned",
+          software: company.total_software_count || 0,
+          annualSpend: parseFloat(company.total_annual_software_spend as any) || 0,
+          savings: parseFloat(company.total_savings_identified as any) || 0,
+          lastActive: "N/A", // TODO: Add last activity tracking
+          industry: company.industry,
+          employees: company.employee_count
+        }));
+        setClients(transformedClients);
+      }
+    } catch (error) {
+      console.error('Error fetching companies:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Form state for adding new client
   const [newClient, setNewClient] = useState<{
@@ -397,6 +405,17 @@ export default function CompaniesPage() {
           <CardDescription>Click any row to view client details</CardDescription>
         </CardHeader>
         <CardContent>
+          {loading ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500">Loading clients...</p>
+            </div>
+          ) : filteredClients.length === 0 ? (
+            <div className="text-center py-12">
+              <Building2 className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 mb-2">No clients found</p>
+              <p className="text-sm text-gray-400">Add your first client to get started</p>
+            </div>
+          ) : (
           <Table>
             <TableHeader>
               <TableRow>
@@ -462,6 +481,7 @@ export default function CompaniesPage() {
               ))}
             </TableBody>
           </Table>
+          )}
         </CardContent>
       </Card>
 

@@ -1,7 +1,7 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
-import { getUserByEmail, updateUserLastLogin } from "./db-utils";
+import { getUserByEmail, updateUserLastLogin, getCompanyById } from "./db-utils";
 import type { User, UserRole } from "@/types";
 
 export interface SessionUser {
@@ -10,6 +10,7 @@ export interface SessionUser {
   name: string;
   role: UserRole;
   companyId?: string;
+  companySlug?: string;
 }
 
 export const authOptions: NextAuthOptions = {
@@ -41,14 +42,22 @@ export const authOptions: NextAuthOptions = {
         }
 
         // Update last login
-        await updateUserLastLogin(user.user_id);
+        await updateUserLastLogin(user.id);
+
+        // Get company slug if user has a company
+        let companySlug: string | undefined;
+        if (user.company_id) {
+          const company = await getCompanyById(user.company_id);
+          companySlug = company?.slug;
+        }
 
         return {
-          id: user.user_id,
+          id: user.id,
           email: user.email,
           name: user.full_name,
           role: user.role,
           companyId: user.company_id,
+          companySlug: companySlug,
         };
       },
     }),
@@ -59,6 +68,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = (user as any).role;
         token.companyId = (user as any).companyId;
+        token.companySlug = (user as any).companySlug;
       }
       return token;
     },
@@ -67,6 +77,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).id = token.id;
         (session.user as any).role = token.role;
         (session.user as any).companyId = token.companyId;
+        (session.user as any).companySlug = token.companySlug;
       }
       return session;
     },
