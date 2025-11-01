@@ -1,50 +1,122 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions, canAccessCompany, canModify } from "@/lib/auth";
+import { getSoftwareByCompany, createSoftware } from "@/lib/db-utils";
+import { createSoftwareSchema, softwareQuerySchema } from "@/lib/validations";
+import type { ApiResponse } from "@/types";
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const companyId = searchParams.get("companyId");
+// GET /api/software - List software for a company
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
 
-  if (!companyId) {
-    return NextResponse.json(
-      { error: "companyId is required" },
-      { status: 400 }
+    if (!session?.user) {
+      return NextResponse.json<ApiResponse>(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const queryParams = Object.fromEntries(searchParams.entries());
+
+    // Validate query parameters
+    const validation = softwareQuerySchema.safeParse(queryParams);
+    if (!validation.success) {
+      return NextResponse.json<ApiResponse>(
+        {
+          success: false,
+          error: "Validation failed",
+          message: validation.error.issues[0]?.message,
+        },
+        { status: 400 }
+      );
+    }
+
+    const { companyId, category, search } = validation.data;
+
+    // Check if user has access to this company
+    if (!canAccessCompany(session.user as any, companyId)) {
+      return NextResponse.json<ApiResponse>(
+        { success: false, error: "Forbidden - Access denied" },
+        { status: 403 }
+      );
+    }
+
+    const software = await getSoftwareByCompany(companyId, { category, search });
+
+    return NextResponse.json<ApiResponse>({
+      success: true,
+      data: software,
+    });
+  } catch (error) {
+    console.error("Error fetching software:", error);
+    return NextResponse.json<ApiResponse>(
+      { success: false, error: "Internal server error" },
+      { status: 500 }
     );
   }
-
-  // TODO: Implement database query
-  const software = [
-    {
-      software_id: "sf-001",
-      company_id: companyId,
-      software_name: "Salesforce",
-      vendor_name: "Salesforce Inc",
-      category: "CRM",
-      total_annual_cost: 120000,
-      total_licenses: 100,
-      active_users: 75,
-      utilization_rate: 75,
-      license_type: "per_user",
-      renewal_date: new Date("2025-06-30"),
-      contract_status: "active",
-    },
-  ];
-
-  return NextResponse.json(software);
 }
 
-export async function POST(request: Request) {
+// POST /api/software - Add new software
+export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user) {
+      return NextResponse.json<ApiResponse>(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
 
-    // TODO: Validate and insert into database
+    // Validate request body
+    const validation = createSoftwareSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json<ApiResponse>(
+        {
+          success: false,
+          error: "Validation failed",
+          message: validation.error.issues[0]?.message,
+        },
+        { status: 400 }
+      );
+    }
 
-    return NextResponse.json(
-      { message: "Software added successfully", software_id: "new-software-id" },
+    const { company_id } = validation.data;
+
+    // Check if user has access to this company
+    if (!canAccessCompany(session.user as any, company_id)) {
+      return NextResponse.json<ApiResponse>(
+        { success: false, error: "Forbidden - Access denied" },
+        { status: 403 }
+      );
+    }
+
+    // Check if user can modify
+    if (!canModify(session.user as any)) {
+      return NextResponse.json<ApiResponse>(
+        { success: false, error: "Forbidden - Modification not allowed" },
+        { status: 403 }
+      );
+    }
+
+    const software = await createSoftware(validation.data);
+
+    return NextResponse.json<ApiResponse>(
+      {
+        success: true,
+        data: software,
+        message: "Software added successfully",
+      },
       { status: 201 }
     );
   } catch (error) {
-    return NextResponse.json(
-      { error: "Failed to add software" },
+    console.error("Error creating software:", error);
+    return NextResponse.json<ApiResponse>(
+      { success: false, error: "Internal server error" },
       { status: 500 }
     );
   }

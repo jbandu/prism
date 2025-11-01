@@ -233,7 +233,7 @@ Return ONLY valid JSON with this structure (no markdown, no explanations):
                     optimization_recommendations = %s,
                     analysis_date = CURRENT_TIMESTAMP
                 FROM (
-                    SELECT usage_id FROM usage_analytics
+                    SELECT id FROM usage_analytics
                     WHERE software_id = %s
                     ORDER BY analysis_date DESC
                     LIMIT 1

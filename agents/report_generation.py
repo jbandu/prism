@@ -131,68 +131,70 @@ Executives care about: savings, risk, and action items."""
         
         return data
 
-    def _create_report_prompt(self, portfolio_data: Dict[str, Any]) -> str:
-        """Create prompt for executive report generation"""
-
-        overview = portfolio_data.get('overview', {})
-        top_expensive = portfolio_data.get('top_expensive', [])
-        replacement_candidates = portfolio_data.get('replacement_candidates', [])
-        cost_optimizations = portfolio_data.get('cost_optimizations', [])
-        high_risk_vendors = portfolio_data.get('high_risk_vendors', [])
-        upcoming_renewals = portfolio_data.get('upcoming_renewals', [])
-
+    def _create_report_prompt(self, data: Dict[str, Any]) -> str:
+        """Create report generation prompt"""
+        
+        # Safely get values with defaults
+        overview = data.get('overview', {})
+        total_software = overview.get('total_software') or 0
+        total_spend = overview.get('total_spend') or 0
+        replacement_candidates = overview.get('replacement_candidates') or 0
+        avg_utilization = overview.get('avg_utilization') or 0
+        
         prompt = f"""Generate an executive report for our software portfolio based on the following data:
-
-**PORTFOLIO OVERVIEW:**
-- Total Software Count: {overview.get('total_software', 0)}
-- Total Annual Spend: ${overview.get('total_spend', 0):,.2f}
-- Average Utilization: {overview.get('avg_utilization', 0):.1f}%
-- Replacement Candidates: {overview.get('replacement_candidates', 0)}
-
-**TOP 10 MOST EXPENSIVE SOFTWARE:**
-{self._format_software_list(top_expensive)}
-
-**REPLACEMENT CANDIDATES (Top 10):**
-{self._format_replacement_candidates(replacement_candidates)}
-
-**COST OPTIMIZATION OPPORTUNITIES (Top 10):**
-{self._format_cost_optimizations(cost_optimizations)}
-
-**HIGH-RISK VENDORS:**
-{self._format_high_risk_vendors(high_risk_vendors)}
-
-**UPCOMING RENEWALS (Next 90 Days):**
-{self._format_renewals(upcoming_renewals)}
-
-**TASK:** Create a comprehensive executive report with:
-
-1. **Executive Summary** (2-3 paragraphs)
-   - Overall portfolio health
-   - Total savings opportunity
-   - Top 3 action items
-
-2. **Key Findings**
-   - Major cost drivers
-   - Underutilization issues
-   - Risk areas
-
-3. **Savings Opportunities**
-   - Immediate optimizations
-   - Strategic replacements
-   - Total potential savings
-
-4. **Risk Assessment**
-   - Vendor concentration
-   - Financial risks
-   - Renewal pressure points
-
-5. **Recommended Actions**
-   - Prioritized list of next steps
-   - Quick wins (30 days)
-   - Strategic initiatives (90+ days)
-
-Format in markdown for easy reading."""
-
+    
+    **PORTFOLIO OVERVIEW:**
+    - Total Software Products: {total_software}
+    - Total Annual Spend: ${total_spend:,.2f}
+    - Replacement Candidates: {replacement_candidates}
+    - Average License Utilization: {avg_utilization:.1f}%
+    
+    **TOP 10 MOST EXPENSIVE SOFTWARE:**
+    {self._format_table(data.get('top_expensive', []), ['software_name', 'vendor_name', 'total_annual_cost', 'utilization_rate'])}
+    
+    **REPLACEMENT OPPORTUNITIES:**
+    {self._format_table(data.get('replacement_candidates', [])[:5], ['software_name', 'total_annual_cost', 'alternative_name', 'cost_savings_percentage'])}
+    
+    **COST OPTIMIZATION OPPORTUNITIES:**
+    {self._format_table(data.get('cost_optimizations', [])[:5], ['software_name', 'waste_amount', 'optimization_opportunity', 'utilization_percentage'])}
+    
+    **HIGH-RISK VENDORS:**
+    {self._format_table(data.get('high_risk_vendors', [])[:5], ['vendor_name', 'financial_risk_score', 'total_spend'])}
+    
+    **UPCOMING RENEWALS:**
+    {self._format_table(data.get('upcoming_renewals', [])[:5], ['software_name', 'vendor_name', 'renewal_date', 'total_annual_cost', 'days_to_renewal'])}
+    
+    Create a professional executive report with these sections:
+    
+    # PRISM PORTFOLIO INTELLIGENCE REPORT
+    *{datetime.now().strftime('%B %d, %Y')}*
+    
+    ## EXECUTIVE SUMMARY
+    [Overview with key findings and total savings opportunity]
+    
+    ## KEY METRICS
+    [Most important numbers]
+    
+    ## TOP RECOMMENDATIONS
+    [Top 5 actions with expected savings]
+    
+    ## COST OPTIMIZATION OPPORTUNITIES
+    [Immediate savings without replacement]
+    
+    ## REPLACEMENT CANDIDATES  
+    [Software that should be replaced with savings potential]
+    
+    ## RISK ASSESSMENT
+    [High-risk vendors and renewals]
+    
+    ## UPCOMING RENEWALS
+    [Next 90 days negotiation priorities]
+    
+    ## NEXT STEPS
+    [Actions for next 30/60/90 days]
+    
+    Make it executive-friendly and action-oriented."""
+    
         return prompt
 
     def _format_software_list(self, software_list: List[Dict[str, Any]]) -> str:

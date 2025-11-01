@@ -1,40 +1,94 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions, isAdmin } from "@/lib/auth";
+import { getCompanies, createCompany } from "@/lib/db-utils";
+import { createCompanySchema } from "@/lib/validations";
+import type { ApiResponse } from "@/types";
 
-export async function GET() {
-  // TODO: Implement database query
-  const companies = [
-    {
-      company_id: "acme-corp",
-      company_name: "Acme Corporation",
-      industry: "Technology",
-      employee_count: 500,
-      created_at: new Date("2024-01-01"),
-    },
-    {
-      company_id: "globex",
-      company_name: "Globex Industries",
-      industry: "Manufacturing",
-      employee_count: 1200,
-      created_at: new Date("2024-02-15"),
-    },
-  ];
+// GET /api/companies - List all companies (admin only)
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
 
-  return NextResponse.json(companies);
+    if (!session?.user) {
+      return NextResponse.json<ApiResponse>(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    // Only admins can list all companies
+    if (!isAdmin(session.user as any)) {
+      return NextResponse.json<ApiResponse>(
+        { success: false, error: "Forbidden - Admin access required" },
+        { status: 403 }
+      );
+    }
+
+    const companies = await getCompanies();
+
+    return NextResponse.json<ApiResponse>({
+      success: true,
+      data: companies,
+    });
+  } catch (error) {
+    console.error("Error fetching companies:", error);
+    return NextResponse.json<ApiResponse>(
+      { success: false, error: "Internal server error" },
+      { status: 500 }
+    );
+  }
 }
 
-export async function POST(request: Request) {
+// POST /api/companies - Create new company (admin only)
+export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user) {
+      return NextResponse.json<ApiResponse>(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    // Only admins can create companies
+    if (!isAdmin(session.user as any)) {
+      return NextResponse.json<ApiResponse>(
+        { success: false, error: "Forbidden - Admin access required" },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
 
-    // TODO: Validate and insert into database
+    // Validate request body
+    const validation = createCompanySchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json<ApiResponse>(
+        {
+          success: false,
+          error: "Validation failed",
+          message: validation.error.issues[0]?.message,
+        },
+        { status: 400 }
+      );
+    }
 
-    return NextResponse.json(
-      { message: "Company created successfully", company_id: "new-company-id" },
+    const company = await createCompany(validation.data);
+
+    return NextResponse.json<ApiResponse>(
+      {
+        success: true,
+        data: company,
+        message: "Company created successfully",
+      },
       { status: 201 }
     );
   } catch (error) {
-    return NextResponse.json(
-      { error: "Failed to create company" },
+    console.error("Error creating company:", error);
+    return NextResponse.json<ApiResponse>(
+      { success: false, error: "Internal server error" },
       { status: 500 }
     );
   }
