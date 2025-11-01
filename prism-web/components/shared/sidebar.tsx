@@ -10,7 +10,8 @@ import {
   Package,
   GitCompare,
   FileText,
-  Calendar
+  Calendar,
+  BarChart3
 } from "lucide-react";
 
 interface SidebarProps {
@@ -26,8 +27,18 @@ const adminLinks = [
   },
   {
     href: "/admin/companies",
-    label: "Companies",
+    label: "Clients",
     icon: Building2,
+  },
+  {
+    href: "/admin/analytics",
+    label: "Analytics",
+    icon: BarChart3,
+  },
+  {
+    href: "/admin/settings",
+    label: "Settings",
+    icon: Settings,
   },
 ];
 

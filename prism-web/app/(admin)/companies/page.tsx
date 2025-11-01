@@ -90,7 +90,21 @@ export default function CompaniesPage() {
   const [addClientStep, setAddClientStep] = useState(1);
 
   // Form state for adding new client
-  const [newClient, setNewClient] = useState({
+  const [newClient, setNewClient] = useState<{
+    companyName: string;
+    industry: string;
+    location: string;
+    employeeCount: string;
+    contactName: string;
+    contactEmail: string;
+    contactPhone: string;
+    contactTitle: string;
+    contractStatus: "prospect" | "active";
+    startDate: string;
+    contractValue: string;
+    billingFrequency: string;
+    notes: string;
+  }>({
     companyName: "",
     industry: "",
     location: "",
@@ -99,7 +113,7 @@ export default function CompaniesPage() {
     contactEmail: "",
     contactPhone: "",
     contactTitle: "",
-    contractStatus: "prospect" as const,
+    contractStatus: "prospect",
     startDate: "",
     contractValue: "",
     billingFrequency: "monthly",
