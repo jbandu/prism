@@ -14,7 +14,8 @@ import {
   Calendar,
   BarChart3,
   Layers,
-  Brain
+  Brain,
+  Globe
 } from "lucide-react";
 
 interface SidebarProps {
@@ -60,6 +61,11 @@ const companyLinks = (companyId: string) => [
     href: `/${companyId}/portfolio-map`,
     label: "Portfolio Map",
     icon: Layers,
+  },
+  {
+    href: `/${companyId}/locations`,
+    label: "Global Presence",
+    icon: Globe,
   },
   {
     href: `/${companyId}/analysis`,
