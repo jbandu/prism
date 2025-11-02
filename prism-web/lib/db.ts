@@ -1,11 +1,16 @@
 import { neon } from "@neondatabase/serverless";
 
-// Only require DATABASE_URL at runtime, not build time
-const DATABASE_URL = process.env.DATABASE_URL || "";
+// Validate DATABASE_URL is present
+if (!process.env.DATABASE_URL) {
+  // During build time, this might not be available, so we'll handle it gracefully
+  if (process.env.NODE_ENV === "production" && process.env.VERCEL_ENV !== "preview") {
+    console.warn("DATABASE_URL is not set. Database operations will fail.");
+  }
+}
 
-const sql = DATABASE_URL ? neon(DATABASE_URL) : null as any;
-
-export { sql };
+// Initialize the Neon connection
+// The connection will be created lazily when first used
+export const sql = neon(process.env.DATABASE_URL || "");
 
 export async function query<T = any>(
   text: string,
