@@ -14,7 +14,8 @@ import {
   Calendar,
   BarChart3,
   Layers,
-  Brain
+  Brain,
+  TrendingDown
 } from "lucide-react";
 
 interface SidebarProps {
@@ -70,6 +71,11 @@ const companyLinks = (companyId: string) => [
     href: `/${companyId}/alternatives`,
     label: "Alternatives",
     icon: GitCompare,
+  },
+  {
+    href: `/${companyId}/redundancy`,
+    label: "Redundancy Analysis",
+    icon: TrendingDown,
   },
   {
     href: `/${companyId}/renewals`,
