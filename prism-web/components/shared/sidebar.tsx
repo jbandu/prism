@@ -15,6 +15,7 @@ import {
   BarChart3,
   Layers,
   Brain,
+  Globe,
   TrendingDown
 } from "lucide-react";
 
@@ -61,6 +62,11 @@ const companyLinks = (companyId: string) => [
     href: `/${companyId}/portfolio-map`,
     label: "Portfolio Map",
     icon: Layers,
+  },
+  {
+    href: `/${companyId}/locations`,
+    label: "Global Presence",
+    icon: Globe,
   },
   {
     href: `/${companyId}/analysis`,
