@@ -49,7 +49,7 @@ export async function GET(request: Request) {
       recommendations.map(async (rec) => {
         const removeIds = rec.software_to_remove_ids || [];
 
-        let softwareToRemove = [];
+        let softwareToRemove: any[] = [];
         if (removeIds.length > 0) {
           softwareToRemove = await sql`
             SELECT id, software_name, vendor_name, annual_cost
