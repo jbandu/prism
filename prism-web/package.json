@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "migrate:redundancy": "tsx scripts/run-migration.ts",
     "test:seed": "tsx e2e/fixtures/seed-test-data.ts",
     "test:cleanup": "tsx e2e/fixtures/seed-test-data.ts cleanup",
     "test:e2e": "playwright test",
