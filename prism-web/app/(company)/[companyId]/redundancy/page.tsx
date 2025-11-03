@@ -331,7 +331,7 @@ export default function RedundancyPage() {
           <Layers className="w-16 h-16 text-gray-500 mx-auto mb-4" />
           <p className="text-gray-300 text-lg font-semibold mb-2">Ready to Analyze</p>
           <p className="text-gray-400 mb-6">
-            Click "Run Redundancy Analysis" above to identify overlapping features and cost savings
+            Click &ldquo;Run Redundancy Analysis&rdquo; above to identify overlapping features and cost savings
           </p>
         </div>
       )}
