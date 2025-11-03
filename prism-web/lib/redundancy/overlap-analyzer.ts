@@ -268,7 +268,7 @@ async function groupOverlapsByCategory(
 
   const overlaps: CategoryOverlap[] = [];
 
-  for (const [category, softwareSet] of categoryMap.entries()) {
+  Array.from(categoryMap.entries()).forEach(([category, softwareSet]) => {
     if (softwareSet.size > 1) {
       // Multiple software have this category
       const softwareList = Array.from(softwareSet);
@@ -289,7 +289,7 @@ async function groupOverlapsByCategory(
         features: Array.from(categoryFeatures.get(category) || []),
       });
     }
-  }
+  });
 
   return overlaps.sort((a, b) => b.redundancyCost - a.redundancyCost);
 }
