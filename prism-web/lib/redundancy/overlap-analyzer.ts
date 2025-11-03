@@ -99,15 +99,26 @@ export async function analyzePortfolioOverlaps(companyId: string): Promise<Analy
       }
     }
 
-    // Get features from database
-    const features = await sql`
-      SELECT sf.feature_name, fc.category_name, sf.feature_description as description
-      FROM software_features sf
-      JOIN feature_categories fc ON sf.feature_category_id = fc.id
-      JOIN software_catalog sc ON sf.software_catalog_id = sc.id
-      WHERE sc.software_name = ${software.software_name}
-      ORDER BY fc.category_name, sf.feature_name
+    // Get features from database (check both catalog and direct mapping)
+    let features = await sql`
+      SELECT sfm.feature_name, fc.category_name, '' as description
+      FROM software_features_mapping sfm
+      JOIN feature_categories fc ON sfm.feature_category_id = fc.id
+      WHERE sfm.software_id = ${software.id}
+      ORDER BY fc.category_name, sfm.feature_name
     `;
+
+    // If no features in mapping, try catalog
+    if (features.length === 0) {
+      features = await sql`
+        SELECT sf.feature_name, fc.category_name, sf.feature_description as description
+        FROM software_features sf
+        JOIN feature_categories fc ON sf.feature_category_id = fc.id
+        JOIN software_catalog sc ON sf.software_catalog_id = sc.id
+        WHERE sc.software_name = ${software.software_name}
+        ORDER BY fc.category_name, sf.feature_name
+      `;
+    }
 
     console.log(`  ✅ Found ${features.length} features`);
 
