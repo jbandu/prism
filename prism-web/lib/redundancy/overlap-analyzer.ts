@@ -220,12 +220,12 @@ function findSharedFeatures(
   );
 
   const shared: string[] = [];
-  for (const feature of featureSet1) {
+  Array.from(featureSet1).forEach(feature => {
     if (featureSet2.has(feature)) {
       const [, featureName] = feature.split(':');
       shared.push(featureName);
     }
-  }
+  });
 
   return shared;
 }
