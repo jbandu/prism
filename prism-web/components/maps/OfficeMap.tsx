@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Map, Marker, Popup, NavigationControl, FullscreenControl } from "react-map-gl";
+import Map, { Marker, Popup, NavigationControl, FullscreenControl } from "react-map-gl";
 import { MapPin, List, Map as MapIcon, Thermometer } from "lucide-react";
 import { OfficePopup } from "./OfficePopup";
 import { OfficeListSidebar } from "./OfficeListSidebar";
