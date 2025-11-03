@@ -171,6 +171,7 @@ async function seedUsers() {
 
   for (const [key, user] of Object.entries(TEST_USERS)) {
     const passwordHash = await bcrypt.hash(user.password, 10);
+    const companyId = 'company_id' in user ? user.company_id : null;
 
     await sql`
       INSERT INTO users (
@@ -182,7 +183,7 @@ async function seedUsers() {
         ${passwordHash},
         ${user.full_name},
         ${user.role},
-        ${user.company_id || null},
+        ${companyId},
         true,
         NOW(),
         NOW()
