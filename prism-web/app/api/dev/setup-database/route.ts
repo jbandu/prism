@@ -203,6 +203,7 @@ export async function POST(request: NextRequest) {
           overlap_count INTEGER NOT NULL,
           software_ids UUID[] NOT NULL,
           redundancy_cost DECIMAL(15,2) DEFAULT 0,
+          priority VARCHAR(20) DEFAULT 'medium',
           analysis_date TIMESTAMPTZ DEFAULT NOW()
         )
       `;
@@ -210,6 +211,29 @@ export async function POST(request: NextRequest) {
       results.push('✅ Feature overlaps table created');
     } catch (error) {
       results.push('⚠️  Feature overlaps table may already exist');
+    }
+
+    try {
+      await sql`
+        -- Feature comparison matrix
+        CREATE TABLE IF NOT EXISTS feature_comparison_matrix (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
+          software_id_1 UUID REFERENCES software(id) ON DELETE CASCADE,
+          software_id_2 UUID REFERENCES software(id) ON DELETE CASCADE,
+          overlap_percentage DECIMAL(5,2) NOT NULL,
+          shared_features_count INTEGER NOT NULL,
+          total_features_compared INTEGER NOT NULL,
+          shared_features JSONB,
+          cost_implication DECIMAL(15,2) DEFAULT 0,
+          analysis_date TIMESTAMPTZ DEFAULT NOW(),
+          UNIQUE(company_id, software_id_1, software_id_2)
+        )
+      `;
+
+      results.push('✅ Feature comparison matrix table created');
+    } catch (error) {
+      results.push('⚠️  Feature comparison matrix table may already exist');
     }
 
     try {
