@@ -254,8 +254,8 @@ async function groupOverlapsByCategory(
   const categoryFeatures = new Map<string, Set<string>>();
 
   // Build category map
-  for (const software of softwareFeatures.values()) {
-    for (const feature of software.features) {
+  Array.from(softwareFeatures.values()).forEach(software => {
+    software.features.forEach(feature => {
       if (!categoryMap.has(feature.category_name)) {
         categoryMap.set(feature.category_name, new Set());
         categoryFeatures.set(feature.category_name, new Set());
@@ -263,8 +263,8 @@ async function groupOverlapsByCategory(
 
       categoryMap.get(feature.category_name)!.add(software.software_name);
       categoryFeatures.get(feature.category_name)!.add(feature.feature_name);
-    }
-  }
+    });
+  });
 
   const overlaps: CategoryOverlap[] = [];
 
