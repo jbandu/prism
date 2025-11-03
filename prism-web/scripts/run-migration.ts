@@ -23,21 +23,11 @@ async function runMigration() {
     const migrationPath = path.join(__dirname, '../../database/migrations/003_feature_overlap_system.sql');
     const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
 
-    // Split by semicolons and execute each statement
-    const statements = migrationSQL
-      .split(';')
-      .map(s => s.trim())
-      .filter(s => s.length > 0 && !s.startsWith('--'));
+    console.log('Executing migration SQL...\n');
 
-    console.log(`Found ${statements.length} SQL statements to execute\n`);
-
-    for (let i = 0; i < statements.length; i++) {
-      const statement = statements[i];
-      if (statement) {
-        console.log(`[${i + 1}/${statements.length}] Executing...`);
-        await sql(statement);
-      }
-    }
+    // Execute the entire SQL file at once
+    // Neon serverless can handle multiple statements in one query
+    await sql(migrationSQL);
 
     console.log('\n✅ Migration completed successfully!\n');
     console.log('Created tables:');
