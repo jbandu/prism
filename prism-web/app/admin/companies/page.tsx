@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,17 +12,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   Building2,
   Search,
-  Filter,
   Plus,
   Eye,
   Edit,
   Play,
-  Mail,
-  ExternalLink,
-  FileText,
-  ArrowUpDown,
-  CheckCircle,
-  Clock
+  CheckCircle
 } from "lucide-react";
 import Link from "next/link";
 import type { Company } from "@/types";
@@ -51,13 +46,12 @@ const formatCurrency = (value: number) => {
 };
 
 export default function CompaniesPage() {
+  const router = useRouter();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "prospect" | "churned">("all");
   const [sortBy, setSortBy] = useState<"name" | "spend" | "savings" | "lastActive">("name");
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [showClientDetail, setShowClientDetail] = useState(false);
   const [showAddClient, setShowAddClient] = useState(false);
   const [addClientStep, setAddClientStep] = useState(1);
 
@@ -149,8 +143,7 @@ export default function CompaniesPage() {
     });
 
   const handleClientClick = (client: Client) => {
-    setSelectedClient(client);
-    setShowClientDetail(true);
+    router.push(`/${client.id}/dashboard`);
   };
 
   const renderAddClientForm = () => {
@@ -402,7 +395,7 @@ export default function CompaniesPage() {
       <Card>
         <CardHeader>
           <CardTitle>All Clients ({filteredClients.length})</CardTitle>
-          <CardDescription>Click any row to view client details</CardDescription>
+          <CardDescription>Click any row to view client dashboard</CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -484,90 +477,6 @@ export default function CompaniesPage() {
           )}
         </CardContent>
       </Card>
-
-      {/* Client Detail Modal */}
-      <Dialog open={showClientDetail} onOpenChange={setShowClientDetail}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{selectedClient?.company}</DialogTitle>
-            <DialogDescription>Client details and quick actions</DialogDescription>
-          </DialogHeader>
-          {selectedClient && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-600">Primary Contact</p>
-                  <p className="font-medium">{selectedClient.contact}</p>
-                  <p className="text-sm text-gray-500">{selectedClient.email}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Status</p>
-                  <Badge
-                    className={
-                      selectedClient.status === "active"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-yellow-100 text-yellow-700"
-                    }
-                  >
-                    {selectedClient.status}
-                  </Badge>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Industry</p>
-                  <p className="font-medium">{selectedClient.industry}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Employees</p>
-                  <p className="font-medium">{selectedClient.employees.toLocaleString()}</p>
-                </div>
-              </div>
-
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-semibold mb-3">Portfolio Summary</h4>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-xs text-gray-600">Software</p>
-                    <p className="text-2xl font-bold">{selectedClient.software}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-600">Annual Spend</p>
-                    <p className="text-2xl font-bold">{formatCurrency(selectedClient.annualSpend)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-600">Savings</p>
-                    <p className="text-2xl font-bold text-green-600">{formatCurrency(selectedClient.savings)}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <Link href={`/${selectedClient.id}/dashboard`}>
-                  <Button>
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    View Dashboard
-                  </Button>
-                </Link>
-                <Button variant="outline">
-                  <Play className="w-4 h-4 mr-2" />
-                  Run Analysis
-                </Button>
-                <Button variant="outline">
-                  <FileText className="w-4 h-4 mr-2" />
-                  Generate Report
-                </Button>
-                <Button variant="outline">
-                  <Mail className="w-4 h-4 mr-2" />
-                  Send Email
-                </Button>
-                <Button variant="outline">
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit Details
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* Add Client Modal */}
       <Dialog open={showAddClient} onOpenChange={setShowAddClient}>
