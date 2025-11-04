@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { Company } from "@/types";
+import { LogoImage } from "@/components/ui/logo-image";
 
 interface Client {
   id: string;
@@ -487,7 +488,15 @@ export default function CompaniesPage() {
                   className="cursor-pointer hover:bg-gray-50"
                   onClick={() => handleClientClick(client)}
                 >
-                  <TableCell className="font-medium">{client.company}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <LogoImage name={client.company} size={40} />
+                      <div>
+                        <div className="font-medium">{client.company}</div>
+                        <div className="text-sm text-gray-500">{client.industry}</div>
+                      </div>
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <div className="text-sm">
                       <div className="font-medium">{client.contact}</div>

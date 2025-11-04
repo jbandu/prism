@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { OverlapMatrix } from '@/components/redundancy/OverlapMatrix';
 import { ConsolidationCards } from '@/components/redundancy/ConsolidationCards';
 import { RefreshCw, TrendingDown, Layers, Target, DollarSign, Package } from 'lucide-react';
+import { LogoImage } from '@/components/ui/logo-image';
 
 interface AnalysisData {
   overlaps: any[];
@@ -181,16 +182,21 @@ export default function RedundancyPage() {
                 key={sw.id}
                 className="bg-gray-900/50 rounded-lg p-4 border border-gray-700 hover:border-gray-600 transition-colors"
               >
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <h3 className="font-semibold text-white">{sw.software_name}</h3>
-                    <p className="text-sm text-gray-400">{sw.vendor_name}</p>
+                <div className="flex items-start gap-3 mb-3">
+                  <LogoImage
+                    name={sw.vendor_name || sw.software_name}
+                    size={48}
+                    className="flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-white truncate">{sw.software_name}</h3>
+                    <p className="text-sm text-gray-400 truncate">{sw.vendor_name}</p>
                   </div>
-                  <span className="px-2 py-1 bg-blue-900/30 text-blue-400 text-xs rounded-full">
+                  <span className="px-2 py-1 bg-blue-900/30 text-blue-400 text-xs rounded-full flex-shrink-0">
                     {sw.category}
                   </span>
                 </div>
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-700">
+                <div className="flex items-center justify-between pt-3 border-t border-gray-700">
                   <div>
                     <p className="text-xs text-gray-500">Annual Cost</p>
                     <p className="text-lg font-bold text-white">
