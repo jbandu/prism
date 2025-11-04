@@ -108,18 +108,18 @@ export async function getSoftwareByCompany(
 ): Promise<Software[]> {
   if (!filters?.category && !filters?.search) {
     const result = await sql`
-      SELECT * FROM software
+      SELECT * FROM software_assets
       WHERE company_id = ${companyId}
-      ORDER BY annual_cost DESC
+      ORDER BY total_annual_cost DESC
     `;
     return result as Software[];
   }
 
   if (filters.category && !filters.search) {
     const result = await sql`
-      SELECT * FROM software
+      SELECT * FROM software_assets
       WHERE company_id = ${companyId} AND category = ${filters.category}
-      ORDER BY annual_cost DESC
+      ORDER BY total_annual_cost DESC
     `;
     return result as Software[];
   }
@@ -127,10 +127,10 @@ export async function getSoftwareByCompany(
   if (!filters.category && filters.search) {
     const searchPattern = `%${filters.search}%`;
     const result = await sql`
-      SELECT * FROM software
+      SELECT * FROM software_assets
       WHERE company_id = ${companyId}
         AND (software_name ILIKE ${searchPattern} OR vendor_name ILIKE ${searchPattern})
-      ORDER BY annual_cost DESC
+      ORDER BY total_annual_cost DESC
     `;
     return result as Software[];
   }
@@ -138,19 +138,19 @@ export async function getSoftwareByCompany(
   // Both category and search
   const searchPattern = `%${filters.search}%`;
   const result = await sql`
-    SELECT * FROM software
+    SELECT * FROM software_assets
     WHERE company_id = ${companyId}
       AND category = ${filters.category}
       AND (software_name ILIKE ${searchPattern} OR vendor_name ILIKE ${searchPattern})
-    ORDER BY annual_cost DESC
+    ORDER BY total_annual_cost DESC
   `;
   return result as Software[];
 }
 
 export async function getSoftwareById(softwareId: string): Promise<Software | null> {
   const result = await sql`
-    SELECT * FROM software
-    WHERE id = ${softwareId}
+    SELECT * FROM software_assets
+    WHERE software_id = ${softwareId}
   `;
   return result[0] as Software || null;
 }
