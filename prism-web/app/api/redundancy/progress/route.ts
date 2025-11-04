@@ -8,9 +8,36 @@ import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { ProgressTracker } from '@/lib/redundancy/progress-tracker';
+import { getCompanyById, getCompanyBySlug } from '@/lib/db-utils';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+/**
+ * Resolve company slug or UUID to UUID
+ */
+async function resolveCompanyId(companyIdOrSlug: string): Promise<string> {
+  // Check if it's already a UUID format
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  if (uuidRegex.test(companyIdOrSlug)) {
+    // Verify the UUID exists
+    const company = await getCompanyById(companyIdOrSlug);
+    if (!company) {
+      throw new Error(`Company not found with ID: ${companyIdOrSlug}`);
+    }
+    return companyIdOrSlug;
+  }
+
+  // It's a slug, look up the company
+  const company = await getCompanyBySlug(companyIdOrSlug);
+
+  if (!company) {
+    throw new Error(`Company not found with slug: ${companyIdOrSlug}`);
+  }
+
+  return company.id;
+}
 
 // GET - Poll for progress
 export async function GET(request: NextRequest) {
@@ -34,7 +61,10 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const progress = ProgressTracker.getProgress(companyId);
+    // Resolve slug to UUID if needed
+    const resolvedCompanyId = await resolveCompanyId(companyId);
+
+    const progress = ProgressTracker.getProgress(resolvedCompanyId);
 
     if (!progress) {
       return new Response(
@@ -96,7 +126,10 @@ export async function DELETE(request: NextRequest) {
       });
     }
 
-    ProgressTracker.requestCancellation(companyId);
+    // Resolve slug to UUID if needed
+    const resolvedCompanyId = await resolveCompanyId(companyId);
+
+    ProgressTracker.requestCancellation(resolvedCompanyId);
 
     return new Response(
       JSON.stringify({
