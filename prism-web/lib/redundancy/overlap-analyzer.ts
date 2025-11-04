@@ -188,15 +188,14 @@ export async function analyzePortfolioOverlaps(
   console.log(`  ✅ Processed ${softwareFeatures.size} software products`);
   progressTracker?.addActivity(`✅ Completed processing ${softwareFeatures.size} software products`, 'success');
 
+  // Step 3: Compare all pairs and build comparison matrix
+  const comparisonMatrix: OverlapResult[] = [];
+  const softwareArray = Array.from(softwareFeatures.values());
+  const totalComparisons = (softwareArray.length * (softwareArray.length - 1)) / 2;
+
   console.log(`\n🔬 Analyzing overlaps between ${softwareFeatures.size} products...`);
   progressTracker?.updateProgress('Analyzing Overlaps', 35, 'Comparing software for redundancies...');
   progressTracker?.addActivity(`🔬 Starting pairwise comparison (${totalComparisons} comparisons)`, 'info');
-
-  // Step 3: Compare all pairs and build comparison matrix
-  const comparisonMatrix: OverlapResult[] = [];
-
-  const softwareArray = Array.from(softwareFeatures.values());
-  const totalComparisons = (softwareArray.length * (softwareArray.length - 1)) / 2;
   let comparisonsCompleted = 0;
 
   for (let i = 0; i < softwareArray.length; i++) {
