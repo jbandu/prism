@@ -54,10 +54,15 @@ export async function analyzePortfolioOverlaps(companyId: string): Promise<Analy
 
   // Step 1: Get all software for this company
   const companySoftware = await sql`
-    SELECT id, software_name, vendor_name, annual_cost, category
-    FROM software
+    SELECT
+      software_id as id,
+      software_name,
+      vendor_name,
+      total_annual_cost as annual_cost,
+      category
+    FROM software_assets
     WHERE company_id = ${companyId}
-    AND status = 'Active'
+    AND contract_status = 'active'
   `;
 
   console.log(`📦 Found ${companySoftware.length} active software products`);
