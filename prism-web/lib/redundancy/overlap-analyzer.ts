@@ -156,17 +156,29 @@ export async function analyzePortfolioOverlaps(companyId: string): Promise<Analy
   // Step 4: Group overlaps by category
   const categoryOverlaps = await groupOverlapsByCategory(softwareFeatures, companyId);
 
-  // Step 5: Save results to database
-  await saveComparisonMatrix(companyId, comparisonMatrix);
-  await saveCategoryOverlaps(companyId, categoryOverlaps);
+  // Step 5: Save results to database (optional - may fail if tables don't exist)
+  try {
+    await saveComparisonMatrix(companyId, comparisonMatrix);
+    await saveCategoryOverlaps(companyId, categoryOverlaps);
+    console.log(`  💾 Results saved to database`);
+  } catch (error) {
+    console.log(`  ⚠️  Could not save to database (tables may not exist): ${error instanceof Error ? error.message : 'Unknown error'}`);
+    // Continue anyway - results can still be returned to client
+  }
 
   // Step 6: Generate consolidation recommendations
   console.log(`\n🎯 Generating consolidation recommendations...`);
-  const recommendations = await generateConsolidationRecommendations(
-    companyId,
-    comparisonMatrix,
-    softwareFeatures
-  );
+  let recommendations: any[] = [];
+  try {
+    recommendations = await generateConsolidationRecommendations(
+      companyId,
+      comparisonMatrix,
+      softwareFeatures
+    );
+  } catch (error) {
+    console.log(`  ⚠️  Could not generate recommendations: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    recommendations = [];
+  }
 
   const totalRedundancyCost = comparisonMatrix.reduce((sum, m) => sum + m.costImplication, 0);
 
