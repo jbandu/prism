@@ -7,9 +7,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { analyzePortfolioOverlaps } from '@/lib/redundancy/overlap-analyzer';
-import { neon } from '@neondatabase/serverless';
-
-const sql = neon(process.env.DATABASE_URL!);
+import { getCompanyById, getCompanyBySlug } from '@/lib/db-utils';
 
 /**
  * Resolve company slug or UUID to UUID
@@ -19,19 +17,22 @@ async function resolveCompanyId(companyIdOrSlug: string): Promise<string> {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   if (uuidRegex.test(companyIdOrSlug)) {
+    // Verify the UUID exists
+    const company = await getCompanyById(companyIdOrSlug);
+    if (!company) {
+      throw new Error(`Company not found with ID: ${companyIdOrSlug}`);
+    }
     return companyIdOrSlug;
   }
 
-  // It's a slug, look up the UUID
-  const result = await sql`
-    SELECT id FROM companies WHERE slug = ${companyIdOrSlug}
-  `;
+  // It's a slug, look up the company (with fallback to name-based slug matching)
+  const company = await getCompanyBySlug(companyIdOrSlug);
 
-  if (result.length === 0) {
+  if (!company) {
     throw new Error(`Company not found with slug: ${companyIdOrSlug}`);
   }
 
-  return result[0].id;
+  return company.id;
 }
 
 export async function POST(request: Request) {
