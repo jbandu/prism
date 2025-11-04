@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { OverlapMatrix } from '@/components/redundancy/OverlapMatrix';
 import { ConsolidationCards } from '@/components/redundancy/ConsolidationCards';
 import { AnalysisProgressDisplay, AnalysisProgress } from '@/components/redundancy/AnalysisProgress';
-import { RefreshCw, TrendingDown, Layers, Target, DollarSign, Package } from 'lucide-react';
+import { RefreshCw, TrendingDown, Layers, Target, DollarSign, Package, ChevronDown } from 'lucide-react';
 import { LogoImage } from '@/components/ui/logo-image';
 
 interface AnalysisData {
@@ -35,6 +35,7 @@ export default function RedundancyPage() {
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [progress, setProgress] = useState<AnalysisProgress | null>(null);
+  const [showPortfolio, setShowPortfolio] = useState(true);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -98,6 +99,7 @@ export default function RedundancyPage() {
           // If completed successfully, load the analysis results
           if (result.data.status === 'completed') {
             setTimeout(() => {
+              setShowPortfolio(false); // Collapse portfolio to show results first
               loadAnalysis();
             }, 500);
           }
@@ -132,6 +134,7 @@ export default function RedundancyPage() {
       setAnalyzing(true);
       setProgress(null);
       setAnalysis(null);
+      setShowPortfolio(false); // Hide portfolio grid during analysis
 
       const res = await fetch('/api/redundancy/analyze', {
         method: 'POST',
@@ -146,11 +149,13 @@ export default function RedundancyPage() {
         startPolling();
       } else {
         setAnalyzing(false);
+        setShowPortfolio(true); // Show portfolio again on error
         console.error('Failed to start analysis:', result.error);
       }
     } catch (error) {
       console.error('Failed to run analysis:', error);
       setAnalyzing(false);
+      setShowPortfolio(true); // Show portfolio again on error
     }
   };
 
@@ -218,92 +223,184 @@ export default function RedundancyPage() {
             Identify overlapping features and consolidation opportunities
           </p>
         </div>
-      </div>
-
-      {/* Software Portfolio */}
-      <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <Package className="w-6 h-6" />
-              Your Software Portfolio
-            </h2>
-            <p className="text-sm text-gray-400 mt-1">
-              {software.length} software products • ${(software.reduce((sum, s) => sum + (s.annual_cost || 0), 0) / 1000).toFixed(0)}K annual spend
-            </p>
-          </div>
+        {analysis && !analyzing && (
           <button
             onClick={runAnalysis}
-            disabled={analyzing || software.length < 2}
+            disabled={software.length < 2}
             className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded-lg text-white font-semibold transition-colors flex items-center gap-2"
           >
-            <RefreshCw className={`w-5 h-5 ${analyzing ? 'animate-spin' : ''}`} />
-            {analyzing ? 'Analyzing...' : analysis ? 'Re-analyze Portfolio' : 'Run Redundancy Analysis'}
+            <RefreshCw className="w-5 h-5" />
+            Re-analyze Portfolio
           </button>
-        </div>
-
-        {/* Progress Display */}
-        {analyzing && progress && (
-          <div className="mb-6">
-            <AnalysisProgressDisplay progress={progress} onCancel={cancelAnalysis} />
-          </div>
-        )}
-
-        {software.length === 0 ? (
-          <div className="text-center py-12">
-            <Package className="w-16 h-16 text-gray-500 mx-auto mb-4" />
-            <p className="text-gray-400 mb-2">No software products found</p>
-            <p className="text-sm text-gray-500">Add software to your portfolio to run redundancy analysis</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {software.map((sw) => (
-              <div
-                key={sw.id}
-                className="bg-gray-900/50 rounded-lg p-4 border border-gray-700 hover:border-gray-600 transition-colors"
-              >
-                <div className="flex items-start gap-3 mb-3">
-                  <LogoImage
-                    name={sw.vendor_name || sw.software_name}
-                    size={48}
-                    className="flex-shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-white truncate">{sw.software_name}</h3>
-                    <p className="text-sm text-gray-400 truncate">{sw.vendor_name}</p>
-                  </div>
-                  <span className="px-2 py-1 bg-blue-900/30 text-blue-400 text-xs rounded-full flex-shrink-0">
-                    {sw.category}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between pt-3 border-t border-gray-700">
-                  <div>
-                    <p className="text-xs text-gray-500">Annual Cost</p>
-                    <p className="text-lg font-bold text-white">
-                      ${(sw.annual_cost / 1000).toFixed(0)}K
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-gray-500">Licenses</p>
-                    <p className="text-lg font-bold text-white">{sw.license_count}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {software.length > 0 && software.length < 2 && (
-          <div className="mt-4 p-4 bg-yellow-900/20 border border-yellow-800/50 rounded-lg">
-            <p className="text-sm text-yellow-400">
-              ⚠️ Need at least 2 software products to run redundancy analysis
-            </p>
-          </div>
         )}
       </div>
+
+      {/* Analysis Progress - Full Screen When Running */}
+      {analyzing && (
+        <div className="space-y-6">
+          {/* Progress Display */}
+          {progress && <AnalysisProgressDisplay progress={progress} onCancel={cancelAnalysis} />}
+
+          {/* Portfolio Summary While Analyzing */}
+          <div className="bg-gray-800/30 rounded-xl p-6 border border-gray-700/50">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-400">Analyzing Portfolio</p>
+                <p className="text-2xl font-bold text-white mt-1">
+                  {software.length} Software Products
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-400">Total Annual Spend</p>
+                <p className="text-2xl font-bold text-white mt-1">
+                  ${(software.reduce((sum, s) => sum + (s.annual_cost || 0), 0) / 1000).toFixed(0)}K
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Software Portfolio - Hidden During Analysis */}
+      {!analyzing && (
+        <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <Package className="w-6 h-6" />
+                Your Software Portfolio
+              </h2>
+              <p className="text-sm text-gray-400 mt-1">
+                {software.length} software products • ${(software.reduce((sum, s) => sum + (s.annual_cost || 0), 0) / 1000).toFixed(0)}K annual spend
+              </p>
+            </div>
+            <button
+              onClick={runAnalysis}
+              disabled={analyzing || software.length < 2}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded-lg text-white font-semibold transition-colors flex items-center gap-2"
+            >
+              <RefreshCw className={`w-5 h-5 ${analyzing ? 'animate-spin' : ''}`} />
+              {analysis ? 'Re-analyze Portfolio' : 'Run Redundancy Analysis'}
+            </button>
+          </div>
+
+          {software.length === 0 ? (
+            <div className="text-center py-12">
+              <Package className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+              <p className="text-gray-400 mb-2">No software products found</p>
+              <p className="text-sm text-gray-500">Add software to your portfolio to run redundancy analysis</p>
+            </div>
+          ) : showPortfolio ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {software.map((sw) => (
+                <div
+                  key={sw.id}
+                  className="bg-gray-900/50 rounded-lg p-4 border border-gray-700 hover:border-gray-600 transition-colors"
+                >
+                  <div className="flex items-start gap-3 mb-3">
+                    <LogoImage
+                      name={sw.vendor_name || sw.software_name}
+                      size={48}
+                      className="flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-white truncate">{sw.software_name}</h3>
+                      <p className="text-sm text-gray-400 truncate">{sw.vendor_name}</p>
+                    </div>
+                    <span className="px-2 py-1 bg-blue-900/30 text-blue-400 text-xs rounded-full flex-shrink-0">
+                      {sw.category}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-700">
+                    <div>
+                      <p className="text-xs text-gray-500">Annual Cost</p>
+                      <p className="text-lg font-bold text-white">
+                        ${(sw.annual_cost / 1000).toFixed(0)}K
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-500">Licenses</p>
+                      <p className="text-lg font-bold text-white">{sw.license_count}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowPortfolio(true)}
+              className="w-full py-4 text-center text-gray-400 hover:text-white hover:bg-gray-900/30 rounded-lg border-2 border-dashed border-gray-700 hover:border-gray-600 transition-colors"
+            >
+              <Package className="w-8 h-8 mx-auto mb-2" />
+              <span className="text-sm font-medium">Click to view {software.length} software products</span>
+            </button>
+          )}
+
+          {software.length > 0 && software.length < 2 && (
+            <div className="mt-4 p-4 bg-yellow-900/20 border border-yellow-800/50 rounded-lg">
+              <p className="text-sm text-yellow-400">
+                ⚠️ Need at least 2 software products to run redundancy analysis
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {analysis && (
         <>
+          {/* Collapsible Portfolio Section */}
+          <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
+            <button
+              onClick={() => setShowPortfolio(!showPortfolio)}
+              className="w-full flex items-center justify-between hover:opacity-80 transition-opacity"
+            >
+              <div className="flex items-center gap-2">
+                <Package className="w-5 h-5 text-gray-400" />
+                <h3 className="text-lg font-semibold text-white">Software Portfolio</h3>
+                <span className="text-sm text-gray-400">({software.length} products)</span>
+              </div>
+              <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showPortfolio ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showPortfolio && (
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {software.map((sw) => (
+                  <div
+                    key={sw.id}
+                    className="bg-gray-900/50 rounded-lg p-4 border border-gray-700 hover:border-gray-600 transition-colors"
+                  >
+                    <div className="flex items-start gap-3 mb-3">
+                      <LogoImage
+                        name={sw.vendor_name || sw.software_name}
+                        size={48}
+                        className="flex-shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-white truncate">{sw.software_name}</h3>
+                        <p className="text-sm text-gray-400 truncate">{sw.vendor_name}</p>
+                      </div>
+                      <span className="px-2 py-1 bg-blue-900/30 text-blue-400 text-xs rounded-full flex-shrink-0">
+                        {sw.category}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-700">
+                      <div>
+                        <p className="text-xs text-gray-500">Annual Cost</p>
+                        <p className="text-lg font-bold text-white">
+                          ${(sw.annual_cost / 1000).toFixed(0)}K
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-gray-500">Licenses</p>
+                        <p className="text-lg font-bold text-white">{sw.license_count}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Key Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Total Redundancy Cost */}
