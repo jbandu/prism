@@ -7,6 +7,33 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { analyzePortfolioOverlaps } from '@/lib/redundancy/overlap-analyzer';
+import { getCompanyById, getCompanyBySlug } from '@/lib/db-utils';
+
+/**
+ * Resolve company slug or UUID to UUID
+ */
+async function resolveCompanyId(companyIdOrSlug: string): Promise<string> {
+  // Check if it's already a UUID format
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  if (uuidRegex.test(companyIdOrSlug)) {
+    // Verify the UUID exists
+    const company = await getCompanyById(companyIdOrSlug);
+    if (!company) {
+      throw new Error(`Company not found with ID: ${companyIdOrSlug}`);
+    }
+    return companyIdOrSlug;
+  }
+
+  // It's a slug, look up the company (with fallback to name-based slug matching)
+  const company = await getCompanyBySlug(companyIdOrSlug);
+
+  if (!company) {
+    throw new Error(`Company not found with slug: ${companyIdOrSlug}`);
+  }
+
+  return company.id;
+}
 
 export async function POST(request: Request) {
   try {
@@ -28,8 +55,11 @@ export async function POST(request: Request) {
 
     console.log(`\n🚀 Starting redundancy analysis for company: ${companyId}`);
 
+    // Resolve slug to UUID if needed
+    const resolvedCompanyId = await resolveCompanyId(companyId);
+
     // Run the analysis
-    const results = await analyzePortfolioOverlaps(companyId);
+    const results = await analyzePortfolioOverlaps(resolvedCompanyId);
 
     return NextResponse.json({
       success: true,
@@ -68,8 +98,11 @@ export async function GET(request: Request) {
       );
     }
 
+    // Resolve slug to UUID if needed
+    const resolvedCompanyId = await resolveCompanyId(companyId);
+
     // Get cached analysis results
-    const results = await analyzePortfolioOverlaps(companyId);
+    const results = await analyzePortfolioOverlaps(resolvedCompanyId);
 
     return NextResponse.json({
       success: true,

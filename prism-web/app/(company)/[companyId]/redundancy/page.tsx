@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { OverlapMatrix } from '@/components/redundancy/OverlapMatrix';
 import { ConsolidationCards } from '@/components/redundancy/ConsolidationCards';
-import { RefreshCw, TrendingDown, Layers, Target, DollarSign } from 'lucide-react';
+import { RefreshCw, TrendingDown, Layers, Target, DollarSign, Package } from 'lucide-react';
+import { LogoImage } from '@/components/ui/logo-image';
 
 interface AnalysisData {
   overlaps: any[];
@@ -14,17 +15,44 @@ interface AnalysisData {
   analysisDate: Date;
 }
 
+interface Software {
+  id: string;
+  software_name: string;
+  vendor_name: string;
+  category: string;
+  annual_cost: number;
+  license_count: number;
+  status: string;
+}
+
 export default function RedundancyPage() {
   const params = useParams();
   const companyId = params.companyId as string;
 
+  const [software, setSoftware] = useState<Software[]>([]);
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
 
   useEffect(() => {
-    loadAnalysis();
+    loadSoftware();
   }, []);
+
+  const loadSoftware = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/software?companyId=${companyId}`);
+      const result = await res.json();
+
+      if (result.success) {
+        setSoftware(result.data || []);
+      }
+    } catch (error) {
+      console.error('Failed to load software:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadAnalysis = async () => {
     try {
@@ -101,7 +129,7 @@ export default function RedundancyPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <RefreshCw className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
-          <p className="text-gray-400">Loading redundancy analysis...</p>
+          <p className="text-gray-400">Loading software portfolio...</p>
         </div>
       </div>
     );
@@ -117,14 +145,81 @@ export default function RedundancyPage() {
             Identify overlapping features and consolidation opportunities
           </p>
         </div>
-        <button
-          onClick={runAnalysis}
-          disabled={analyzing}
-          className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded-lg text-white font-semibold transition-colors flex items-center gap-2"
-        >
-          <RefreshCw className={`w-5 h-5 ${analyzing ? 'animate-spin' : ''}`} />
-          {analyzing ? 'Analyzing...' : 'Re-analyze Portfolio'}
-        </button>
+      </div>
+
+      {/* Software Portfolio */}
+      <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <Package className="w-6 h-6" />
+              Your Software Portfolio
+            </h2>
+            <p className="text-sm text-gray-400 mt-1">
+              {software.length} software products • ${(software.reduce((sum, s) => sum + (s.annual_cost || 0), 0) / 1000).toFixed(0)}K annual spend
+            </p>
+          </div>
+          <button
+            onClick={runAnalysis}
+            disabled={analyzing || software.length < 2}
+            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded-lg text-white font-semibold transition-colors flex items-center gap-2"
+          >
+            <RefreshCw className={`w-5 h-5 ${analyzing ? 'animate-spin' : ''}`} />
+            {analyzing ? 'Analyzing...' : analysis ? 'Re-analyze Portfolio' : 'Run Redundancy Analysis'}
+          </button>
+        </div>
+
+        {software.length === 0 ? (
+          <div className="text-center py-12">
+            <Package className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+            <p className="text-gray-400 mb-2">No software products found</p>
+            <p className="text-sm text-gray-500">Add software to your portfolio to run redundancy analysis</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {software.map((sw) => (
+              <div
+                key={sw.id}
+                className="bg-gray-900/50 rounded-lg p-4 border border-gray-700 hover:border-gray-600 transition-colors"
+              >
+                <div className="flex items-start gap-3 mb-3">
+                  <LogoImage
+                    name={sw.vendor_name || sw.software_name}
+                    size={48}
+                    className="flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-white truncate">{sw.software_name}</h3>
+                    <p className="text-sm text-gray-400 truncate">{sw.vendor_name}</p>
+                  </div>
+                  <span className="px-2 py-1 bg-blue-900/30 text-blue-400 text-xs rounded-full flex-shrink-0">
+                    {sw.category}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between pt-3 border-t border-gray-700">
+                  <div>
+                    <p className="text-xs text-gray-500">Annual Cost</p>
+                    <p className="text-lg font-bold text-white">
+                      ${(sw.annual_cost / 1000).toFixed(0)}K
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500">Licenses</p>
+                    <p className="text-lg font-bold text-white">{sw.license_count}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {software.length > 0 && software.length < 2 && (
+          <div className="mt-4 p-4 bg-yellow-900/20 border border-yellow-800/50 rounded-lg">
+            <p className="text-sm text-yellow-400">
+              ⚠️ Need at least 2 software products to run redundancy analysis
+            </p>
+          </div>
+        )}
       </div>
 
       {analysis && (
@@ -237,15 +332,13 @@ export default function RedundancyPage() {
         </>
       )}
 
-      {!analysis && !loading && (
-        <div className="text-center py-16">
-          <p className="text-gray-400 mb-4">No analysis data available</p>
-          <button
-            onClick={runAnalysis}
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-semibold"
-          >
-            Run Analysis
-          </button>
+      {!analysis && !loading && !analyzing && software.length >= 2 && (
+        <div className="text-center py-16 bg-gray-800/30 rounded-xl border-2 border-dashed border-gray-700">
+          <Layers className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+          <p className="text-gray-300 text-lg font-semibold mb-2">Ready to Analyze</p>
+          <p className="text-gray-400 mb-6">
+            Click &ldquo;Run Redundancy Analysis&rdquo; above to identify overlapping features and cost savings
+          </p>
         </div>
       )}
     </div>

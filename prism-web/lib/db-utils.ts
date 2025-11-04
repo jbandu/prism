@@ -27,11 +27,37 @@ export async function getCompanyById(companyId: string): Promise<Company | null>
 }
 
 export async function getCompanyBySlug(slug: string): Promise<Company | null> {
-  const result = await sql`
+  try {
+    // Try to find by slug column if it exists
+    const result = await sql`
+      SELECT * FROM companies
+      WHERE slug = ${slug}
+    `;
+    if (result[0]) {
+      return result[0] as Company;
+    }
+  } catch (error) {
+    // If slug column doesn't exist, fall through to name matching
+    console.log('Slug column may not exist, trying name matching');
+  }
+
+  // Fallback: try to match by generating slug from company_name
+  const companies = await sql`
     SELECT * FROM companies
-    WHERE slug = ${slug}
   `;
-  return result[0] as Company || null;
+
+  for (const company of companies) {
+    const generatedSlug = (company.company_name as string)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+    if (generatedSlug === slug) {
+      return company as Company;
+    }
+  }
+
+  return null;
 }
 
 export async function createCompany(data: {
@@ -39,9 +65,15 @@ export async function createCompany(data: {
   industry: string;
   employee_count: number;
 }): Promise<Company> {
+  // Generate slug from company name
+  const slug = data.company_name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
   const result = await sql`
-    INSERT INTO companies (company_name, industry, employee_count)
-    VALUES (${data.company_name}, ${data.industry}, ${data.employee_count})
+    INSERT INTO companies (company_name, slug, industry, employee_count)
+    VALUES (${data.company_name}, ${slug}, ${data.industry}, ${data.employee_count})
     RETURNING *
   `;
   return result[0] as Company;
@@ -142,9 +174,10 @@ export async function getSoftwareByCompany(
 }
 
 export async function getSoftwareById(softwareId: string): Promise<Software | null> {
+  // Try both 'id' and 'software_id' to handle different schema versions
   const result = await sql`
     SELECT * FROM software_assets
-    WHERE software_id = ${softwareId}
+    WHERE software_id = ${softwareId} OR id = ${softwareId}
   `;
   return result[0] as Software || null;
 }

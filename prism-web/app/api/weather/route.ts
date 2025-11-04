@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
 
     // Clean up old cache entries (simple cleanup on each request)
     const now = Date.now();
-    for (const [key, value] of weatherCache.entries()) {
+    for (const [key, value] of Array.from(weatherCache.entries())) {
       if (now - value.timestamp > CACHE_TTL) {
         weatherCache.delete(key);
       }

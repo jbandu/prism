@@ -31,9 +31,11 @@ import {
   Users,
   BarChart3,
   Info,
-  ExternalLink
+  ExternalLink,
+  Target
 } from "lucide-react";
 import { toast } from "sonner";
+import { NegotiationPlaybook } from "@/components/negotiation/NegotiationPlaybook";
 
 interface RenewalSoftware {
   id: string;
@@ -65,6 +67,11 @@ export default function RenewalsPage({
   const [showActionDialog, setShowActionDialog] = useState(false);
   const [actionNotes, setActionNotes] = useState("");
   const [actionDecision, setActionDecision] = useState<"renew" | "renegotiate" | "cancel" | null>(null);
+
+  // Negotiation Playbook state
+  const [showNegotiationDialog, setShowNegotiationDialog] = useState(false);
+  const [negotiationPlaybook, setNegotiationPlaybook] = useState<any | null>(null);
+  const [generatingPlaybook, setGeneratingPlaybook] = useState(false);
 
   useEffect(() => {
     fetchRenewals();
@@ -189,6 +196,42 @@ export default function RenewalsPage({
     setSelectedRenewal(null);
     setActionNotes("");
     setActionDecision(null);
+  };
+
+  const handlePrepareNegotiation = async (renewal: RenewalSoftware) => {
+    try {
+      setGeneratingPlaybook(true);
+      setSelectedRenewal(renewal);
+      setShowNegotiationDialog(true);
+
+      toast.info("Generating AI negotiation strategy...");
+
+      const response = await fetch('/api/negotiation/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ softwareId: renewal.id })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setNegotiationPlaybook(result.data);
+        toast.success("Negotiation playbook ready!", {
+          description: `${result.data.confidence_level} confidence strategy generated`
+        });
+      } else {
+        toast.error("Failed to generate playbook", {
+          description: result.error || "Please try again"
+        });
+        setShowNegotiationDialog(false);
+      }
+    } catch (error) {
+      console.error('Error generating playbook:', error);
+      toast.error("Failed to generate playbook");
+      setShowNegotiationDialog(false);
+    } finally {
+      setGeneratingPlaybook(false);
+    }
   };
 
   // Filter renewals by time period
@@ -444,13 +487,24 @@ export default function RenewalsPage({
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openActionDialog(item)}
-                          >
-                            Take Action
-                          </Button>
+                          <div className="flex gap-2 justify-end">
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => handlePrepareNegotiation(item)}
+                              className="bg-prism-primary hover:bg-prism-primary/90"
+                            >
+                              <Target className="w-4 h-4 mr-1" />
+                              Prepare Negotiation
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openActionDialog(item)}
+                            >
+                              Take Action
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -812,6 +866,42 @@ export default function RenewalsPage({
                 </Card>
               </TabsContent>
             </Tabs>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Negotiation Playbook Dialog */}
+      <Dialog open={showNegotiationDialog} onOpenChange={setShowNegotiationDialog}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl flex items-center gap-2">
+              <Target className="w-6 h-6 text-prism-primary" />
+              Negotiation Strategy: {selectedRenewal?.software_name}
+            </DialogTitle>
+            <DialogDescription>
+              AI-powered negotiation playbook with market intelligence and email templates
+            </DialogDescription>
+          </DialogHeader>
+
+          {generatingPlaybook ? (
+            <div className="flex flex-col items-center justify-center py-16">
+              <RefreshCw className="w-12 h-12 text-prism-primary animate-spin mb-4" />
+              <p className="text-lg font-semibold text-gray-900">Analyzing your leverage...</p>
+              <p className="text-sm text-gray-600 mt-2">Researching market rates and alternatives</p>
+              <p className="text-sm text-gray-600">Generating custom strategy and email templates</p>
+            </div>
+          ) : negotiationPlaybook ? (
+            <NegotiationPlaybook
+              data={negotiationPlaybook}
+              onRecordOutcome={() => {
+                setShowNegotiationDialog(false);
+                toast.info("Outcome tracking coming soon!");
+              }}
+            />
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-500">No playbook generated yet</p>
+            </div>
           )}
         </DialogContent>
       </Dialog>

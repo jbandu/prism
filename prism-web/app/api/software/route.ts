@@ -18,7 +18,28 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const queryParams = Object.fromEntries(searchParams.entries());
+    let companyIdParam = searchParams.get('companyId') || '';
+
+    // Check if it's a slug or UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    // If it's a slug, resolve to UUID
+    if (companyIdParam && !uuidRegex.test(companyIdParam)) {
+      const { getCompanyBySlug } = await import('@/lib/db-utils');
+      const company = await getCompanyBySlug(companyIdParam);
+      if (!company) {
+        return NextResponse.json<ApiResponse>(
+          { success: false, error: "Company not found" },
+          { status: 404 }
+        );
+      }
+      companyIdParam = company.id;
+    }
+
+    const queryParams = {
+      ...Object.fromEntries(searchParams.entries()),
+      companyId: companyIdParam,
+    };
 
     // Validate query parameters
     const validation = softwareQuerySchema.safeParse(queryParams);
