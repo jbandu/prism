@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Software } from "@/types";
+import { LogoImage } from "@/components/ui/logo-image";
 
 type ViewMode = "grid" | "treemap" | "category" | "spend";
 
@@ -81,13 +82,6 @@ export default function PortfolioMapPage({
       return `$${(value / 1000).toFixed(0)}K`;
     }
     return `$${value.toFixed(0)}`;
-  };
-
-  // Get logo URL for software (placeholder - you can integrate with Clearbit or similar)
-  const getLogoUrl = (vendorName: string, softwareName: string) => {
-    // Placeholder: Use UI Avatars as fallback
-    const initial = softwareName.charAt(0).toUpperCase();
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(softwareName)}&background=random&size=128&bold=true`;
   };
 
   // Filter software
@@ -282,15 +276,11 @@ export default function PortfolioMapPage({
                 })}
               >
                 <CardContent className="pt-6 text-center">
-                  <div className="w-16 h-16 mx-auto mb-3 rounded-lg bg-gradient-to-br from-prism-primary/10 to-prism-accent/10 flex items-center justify-center overflow-hidden">
-                    <img
-                      src={getLogoUrl(item.vendor_name, item.software_name)}
-                      alt={item.software_name}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                        e.currentTarget.parentElement!.innerHTML = `<span class="text-2xl font-bold text-prism-primary">${item.software_name.charAt(0)}</span>`;
-                      }}
+                  <div className="w-16 h-16 mx-auto mb-3">
+                    <LogoImage
+                      name={item.vendor_name || item.software_name}
+                      size={64}
+                      className="rounded-lg"
                     />
                   </div>
                   <h3 className="font-semibold text-sm text-gray-900 mb-1 truncate">
@@ -360,15 +350,11 @@ export default function PortfolioMapPage({
                           description: `${item.vendor_name} • ${formatCurrency(annualCost)}/yr`
                         })}
                       >
-                        <div className="w-12 h-12 mx-auto mb-2 rounded-lg bg-gradient-to-br from-prism-primary/10 to-prism-accent/10 flex items-center justify-center overflow-hidden">
-                          <img
-                            src={getLogoUrl(item.vendor_name, item.software_name)}
-                            alt={item.software_name}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                              e.currentTarget.parentElement!.innerHTML = `<span class="text-lg font-bold text-prism-primary">${item.software_name.charAt(0)}</span>`;
-                            }}
+                        <div className="w-12 h-12 mx-auto mb-2">
+                          <LogoImage
+                            name={item.vendor_name || item.software_name}
+                            size={48}
+                            className="rounded-lg"
                           />
                         </div>
                         <p className="font-medium text-xs text-gray-900 mb-1 truncate">
@@ -497,15 +483,11 @@ export default function PortfolioMapPage({
                     <div className="flex-shrink-0 w-8 h-8 rounded-full bg-prism-primary text-white flex items-center justify-center font-bold text-sm">
                       {index + 1}
                     </div>
-                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-prism-primary/10 to-prism-accent/10 flex items-center justify-center overflow-hidden flex-shrink-0">
-                      <img
-                        src={getLogoUrl(item.vendor_name, item.software_name)}
-                        alt={item.software_name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                          e.currentTarget.parentElement!.innerHTML = `<span class="text-lg font-bold text-prism-primary">${item.software_name.charAt(0)}</span>`;
-                        }}
+                    <div className="flex-shrink-0">
+                      <LogoImage
+                        name={item.vendor_name || item.software_name}
+                        size={48}
+                        className="rounded-lg"
                       />
                     </div>
                     <div className="flex-1 min-w-0">
