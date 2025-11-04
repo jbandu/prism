@@ -4,7 +4,7 @@
  * Calculates company scores, rankings, and awards achievements
  */
 
-import { sql } from '@neondatabase/serverless';
+import { sql } from '@/lib/db';
 
 export interface CompanyMetrics {
   companyId: string;

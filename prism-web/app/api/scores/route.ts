@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@neondatabase/serverless';
+import { sql } from '@/lib/db';
 import { ScoringService } from '@/lib/gamification/scoring-service';
 
 export async function GET(request: NextRequest) {
