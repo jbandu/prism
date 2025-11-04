@@ -8,9 +8,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { extractFeaturesFromDescription } from '@/lib/redundancy/description-feature-extractor';
+import { getCompanyById, getCompanyBySlug } from '@/lib/db-utils';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
+
+/**
+ * Resolve company slug or UUID to UUID
+ */
+async function resolveCompanyId(companyIdOrSlug: string): Promise<string> {
+  // Check if it's already a UUID format
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  if (uuidRegex.test(companyIdOrSlug)) {
+    // Verify the UUID exists
+    const company = await getCompanyById(companyIdOrSlug);
+    if (!company) {
+      throw new Error(`Company not found with ID: ${companyIdOrSlug}`);
+    }
+    return companyIdOrSlug;
+  }
+
+  // It's a slug, look up the company
+  const company = await getCompanyBySlug(companyIdOrSlug);
+
+  if (!company) {
+    throw new Error(`Company not found with slug: ${companyIdOrSlug}`);
+  }
+
+  return company.id;
+}
 
 interface ExtractFeaturesRequest {
   companyId: string;
@@ -38,6 +65,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Resolve slug to UUID if needed
+    const resolvedCompanyId = await resolveCompanyId(companyId);
+
     // Fetch software products (note: software table doesn't have description column)
     // We'll extract features based on software_name, vendor_name, and category
     let softwareQuery;
@@ -50,7 +80,7 @@ export async function POST(request: NextRequest) {
           category,
           COALESCE(software_name || ' ' || vendor_name, software_name) as description
         FROM software
-        WHERE company_id = ${companyId}
+        WHERE company_id = ${resolvedCompanyId}
           AND id = ANY(${softwareIds})
       `;
     } else {
@@ -62,7 +92,7 @@ export async function POST(request: NextRequest) {
           category,
           COALESCE(software_name || ' ' || vendor_name, software_name) as description
         FROM software
-        WHERE company_id = ${companyId}
+        WHERE company_id = ${resolvedCompanyId}
       `;
     }
 

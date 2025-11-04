@@ -57,6 +57,7 @@ export async function analyzePortfolioOverlaps(
   console.log(`\n🔍 Starting portfolio overlap analysis for company ${companyId}...\n`);
 
   progressTracker?.updateProgress('Loading Software', 5, 'Loading software portfolio...');
+  progressTracker?.addActivity('📦 Querying database for active software products', 'info');
 
   // Step 1: Get all software for this company
   const companySoftware = await sql`
@@ -72,6 +73,7 @@ export async function analyzePortfolioOverlaps(
   `;
 
   console.log(`📦 Found ${companySoftware.length} active software products`);
+  progressTracker?.addActivity(`✅ Found ${companySoftware.length} active software products`, 'success');
 
   if (companySoftware.length < 2) {
     console.log('⚠️  Need at least 2 software products for overlap analysis');
@@ -91,6 +93,7 @@ export async function analyzePortfolioOverlaps(
     `Analyzing ${companySoftware.length} software products...`,
     { totalSoftware: companySoftware.length }
   );
+  progressTracker?.addActivity('📊 Loading feature tags for all software products', 'info');
 
   // Step 2: Build software features map (using category-based analysis for now)
   const softwareFeatures = new Map<string, SoftwareWithFeatures>();
@@ -109,6 +112,8 @@ export async function analyzePortfolioOverlaps(
     LEFT JOIN feature_categories fc ON fc.id = sfm.feature_category_id
     WHERE software_id = ANY(${softwareIds})
   `;
+
+  progressTracker?.addActivity(`📋 Loaded ${featuresResult.length} feature mappings from database`, 'info');
 
   // Group features by software_id
   const featuresBySoftware = new Map<string, any[]>();
@@ -167,17 +172,25 @@ export async function analyzePortfolioOverlaps(
         { processedSoftware: idx + 1 }
       );
     }
+
+    // Log individual software processing
+    if (features.length > 0) {
+      progressTracker?.addActivity(`✓ ${software.software_name}: ${features.length} features tagged`, 'info');
+    }
   }
 
   if (softwareWithoutFeatures > 0) {
     console.log(`  ⚠️  ${softwareWithoutFeatures} software products have no tagged features (using category-based matching)`);
     console.log(`  💡 Tip: Use "Extract Features" or manually tag features for better accuracy`);
+    progressTracker?.addActivity(`⚠️ ${softwareWithoutFeatures} products have no features (using category fallback)`, 'warning');
   }
 
   console.log(`  ✅ Processed ${softwareFeatures.size} software products`);
+  progressTracker?.addActivity(`✅ Completed processing ${softwareFeatures.size} software products`, 'success');
 
   console.log(`\n🔬 Analyzing overlaps between ${softwareFeatures.size} products...`);
   progressTracker?.updateProgress('Analyzing Overlaps', 35, 'Comparing software for redundancies...');
+  progressTracker?.addActivity(`🔬 Starting pairwise comparison (${totalComparisons} comparisons)`, 'info');
 
   // Step 3: Compare all pairs and build comparison matrix
   const comparisonMatrix: OverlapResult[] = [];
@@ -240,9 +253,9 @@ export async function analyzePortfolioOverlaps(
           costImplication,
         });
 
-        console.log(
-          `  🔗 ${sw1.software_name} ↔ ${sw2.software_name}: ${overlapPercentage.toFixed(1)}% overlap ($${costImplication.toFixed(0)} redundancy)`
-        );
+        const logMessage = `🔗 ${sw1.software_name} ↔ ${sw2.software_name}: ${overlapPercentage.toFixed(1)}% overlap ($${costImplication.toFixed(0)} redundancy)`;
+        console.log(`  ${logMessage}`);
+        progressTracker?.addActivity(logMessage, 'warning');
       }
     }
   }
@@ -253,23 +266,29 @@ export async function analyzePortfolioOverlaps(
     'Grouping overlaps by category...',
     { overlapsFound: comparisonMatrix.length }
   );
+  progressTracker?.addActivity(`📊 Found ${comparisonMatrix.length} significant overlaps`, 'success');
 
   // Step 4: Group overlaps by category
   const categoryOverlaps = await groupOverlapsByCategory(softwareFeatures, companyId);
+  progressTracker?.addActivity(`📁 Grouped into ${categoryOverlaps.length} category overlaps`, 'info');
 
   progressTracker?.updateProgress('Saving Results', 85, 'Saving analysis results...');
+  progressTracker?.addActivity('💾 Saving comparison matrix to database', 'info');
 
   // Step 5: Save results to database (optional - may fail if tables don't exist)
   try {
     await saveComparisonMatrix(companyId, comparisonMatrix);
     await saveCategoryOverlaps(companyId, categoryOverlaps);
     console.log(`  💾 Results saved to database`);
+    progressTracker?.addActivity('✅ Results saved to database successfully', 'success');
   } catch (error) {
     console.log(`  ⚠️  Could not save to database (tables may not exist): ${error instanceof Error ? error.message : 'Unknown error'}`);
+    progressTracker?.addActivity('⚠️ Database save skipped (tables may not exist)', 'warning');
     // Continue anyway - results can still be returned to client
   }
 
   progressTracker?.updateProgress('Generating Recommendations', 90, 'Creating consolidation recommendations...');
+  progressTracker?.addActivity('🤖 Generating AI-powered consolidation recommendations', 'info');
 
   // Step 6: Generate consolidation recommendations
   console.log(`\n🎯 Generating consolidation recommendations...`);
@@ -280,8 +299,10 @@ export async function analyzePortfolioOverlaps(
       comparisonMatrix,
       softwareFeatures
     );
+    progressTracker?.addActivity(`💡 Generated ${recommendations.length} consolidation opportunities`, 'success');
   } catch (error) {
     console.log(`  ⚠️  Could not generate recommendations: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    progressTracker?.addActivity('⚠️ Recommendation generation failed', 'error');
     recommendations = [];
   }
 

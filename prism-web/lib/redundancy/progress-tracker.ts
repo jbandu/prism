@@ -3,6 +3,12 @@
  * Tracks progress across multiple steps and provides real-time updates
  */
 
+export interface ActivityLogEntry {
+  timestamp: number;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+}
+
 export interface AnalysisProgress {
   companyId: string;
   status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
@@ -15,6 +21,7 @@ export interface AnalysisProgress {
   startTime: number;
   message: string;
   cancellationRequested: boolean;
+  activityLog: ActivityLogEntry[]; // Detailed activity log
   results?: any; // Store analysis results when complete
 }
 
@@ -45,6 +52,13 @@ export class ProgressTracker {
       startTime: this.startTime,
       message: 'Starting analysis...',
       cancellationRequested: false,
+      activityLog: [
+        {
+          timestamp: Date.now(),
+          message: `🚀 Starting redundancy analysis for ${totalSoftware} software products`,
+          type: 'info',
+        },
+      ],
     });
   }
 
@@ -61,6 +75,17 @@ export class ProgressTracker {
     const estimatedTotal = progress > 0 ? (elapsed / progress) * 100 : 0;
     const estimatedTimeRemaining = Math.max(0, estimatedTotal - elapsed);
 
+    // Add to activity log
+    const activityLog = [...existing.activityLog];
+    if (activityLog.length > 50) {
+      activityLog.shift(); // Keep only last 50 entries
+    }
+    activityLog.push({
+      timestamp: Date.now(),
+      message,
+      type: 'info',
+    });
+
     progressStore.set(this.companyId, {
       ...existing,
       currentStep,
@@ -68,10 +93,31 @@ export class ProgressTracker {
       message,
       estimatedTimeRemaining: Math.round(estimatedTimeRemaining),
       status: 'running',
+      activityLog,
       ...additionalData,
     });
 
     this.stepStartTime = Date.now();
+  }
+
+  addActivity(message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') {
+    const existing = progressStore.get(this.companyId);
+    if (!existing) return;
+
+    const activityLog = [...existing.activityLog];
+    if (activityLog.length > 50) {
+      activityLog.shift();
+    }
+    activityLog.push({
+      timestamp: Date.now(),
+      message,
+      type,
+    });
+
+    progressStore.set(this.companyId, {
+      ...existing,
+      activityLog,
+    });
   }
 
   complete(overlapsFound: number, totalRedundancyCost: number, results?: any) {
