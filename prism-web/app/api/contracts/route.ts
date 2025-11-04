@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@vercel/postgres';
+import { sql } from '@/lib/db';
 
 export const runtime = 'nodejs';
 
@@ -33,14 +33,14 @@ export async function GET(request: NextRequest) {
         LIMIT 1
       `;
 
-      if (contractResult.rows.length === 0) {
+      if (contractResult.length === 0) {
         return NextResponse.json(
           { error: 'Contract not found' },
           { status: 404 }
         );
       }
 
-      const contract = contractResult.rows[0];
+      const contract = contractResult[0];
 
       // Get risk alerts
       const alertsResult = await sql`
@@ -67,8 +67,8 @@ export async function GET(request: NextRequest) {
         success: true,
         data: {
           contract: contract,
-          risk_alerts: alertsResult.rows,
-          reminders: remindersResult.rows
+          risk_alerts: alertsResult,
+          reminders: remindersResult
         }
       });
 
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
         ORDER BY c.created_at DESC
       `;
 
-      let contracts = contractsResult.rows;
+      let contracts = contractsResult;
 
       // Optionally include risk alerts for each contract
       if (includeRiskAlerts) {
@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
 
             return {
               ...contract,
-              risk_alerts: alerts.rows
+              risk_alerts: alerts
             };
           })
         );

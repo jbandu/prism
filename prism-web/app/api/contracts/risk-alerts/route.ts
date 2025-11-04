@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@vercel/postgres';
+import { sql } from '@/lib/db';
 import { z } from 'zod';
 
 export const runtime = 'nodejs';
@@ -70,11 +70,18 @@ export async function GET(request: NextRequest) {
         cra.created_at DESC
     `;
 
-    const result = await sql.query(query, params);
+    // Replace placeholders with actual values
+    let finalQuery = query;
+    params.forEach((param, idx) => {
+      const escapedParam = typeof param === 'string' ? `'${param.replace(/'/g, "''")}'` : param;
+      finalQuery = finalQuery.replace(`$${idx + 1}`, escapedParam);
+    });
+
+    const result = await sql(finalQuery);
 
     return NextResponse.json({
       success: true,
-      data: result.rows
+      data: result
     });
 
   } catch (error) {
@@ -119,22 +126,21 @@ export async function PATCH(request: NextRequest) {
 
     // Build update query
     const setClause = Object.keys(updates)
-      .map((key, index) => `${key} = $${index + 2}`)
+      .map(key => {
+        const value = updates[key];
+        const escapedValue = typeof value === 'string' ? `'${value.replace(/'/g, "''")}'` : value;
+        return `${key} = ${escapedValue}`;
+      })
       .join(', ');
 
-    const query = `
+    const result = await sql(`
       UPDATE contract_risk_alerts
       SET ${setClause}
-      WHERE id = $1
+      WHERE id = '${data.alertId}'
       RETURNING *
-    `;
+    `);
 
-    const result = await sql.query(query, [
-      data.alertId,
-      ...Object.values(updates)
-    ]);
-
-    if (result.rows.length === 0) {
+    if (result.length === 0) {
       return NextResponse.json(
         { error: 'Risk alert not found' },
         { status: 404 }
@@ -144,7 +150,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Risk alert updated successfully',
-      data: result.rows[0]
+      data: result[0]
     });
 
   } catch (error) {
@@ -154,7 +160,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json(
         {
           error: 'Validation failed',
-          details: error.errors
+          details: error.issues
         },
         { status: 400 }
       );

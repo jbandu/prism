@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@vercel/postgres';
+import { sql } from '@/lib/db';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -12,7 +12,7 @@ async function runMigration(filePath: string, name: string) {
 
     // Execute the SQL
     // Note: We need to execute this as raw SQL since it contains multiple statements
-    await sql.query(sqlContent);
+    await sql(sqlContent);
 
     console.log(`✅ Successfully ran migration: ${name}`);
     return { success: true, name };

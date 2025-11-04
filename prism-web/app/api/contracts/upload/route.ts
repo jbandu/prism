@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@vercel/postgres';
+import { sql } from '@/lib/db';
 import { z } from 'zod';
 import {
   parsePDFContract,
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       RETURNING id
     `;
 
-    const contractId = insertResult.rows[0].id;
+    const contractId = insertResult[0].id;
     console.log(`Contract created with ID: ${contractId}`);
 
     try {

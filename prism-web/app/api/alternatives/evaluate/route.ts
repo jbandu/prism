@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@vercel/postgres';
+import { sql } from '@/lib/db';
 import { z } from 'zod';
 
 export const runtime = 'nodejs';
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
       LIMIT 1
     `;
 
-    if (existing.rows.length > 0) {
+    if (existing.length > 0) {
       // Update existing evaluation
       await sql`
         UPDATE alternative_evaluations SET
@@ -94,13 +94,13 @@ export async function POST(request: NextRequest) {
           status = ${data.status || 'under_review'},
           evaluated_by = ${data.evaluatedBy || null},
           evaluated_at = NOW()
-        WHERE id = ${existing.rows[0].id}
+        WHERE id = ${existing[0].id}
       `;
 
       return NextResponse.json({
         success: true,
         message: 'Evaluation updated successfully',
-        evaluationId: existing.rows[0].id
+        evaluationId: existing[0].id
       });
 
     } else {
@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         message: 'Evaluation created successfully',
-        evaluationId: result.rows[0].id
+        evaluationId: result[0].id
       });
     }
 
@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: 'Validation failed',
-          details: error.errors
+          details: error.issues
         },
         { status: 400 }
       );
@@ -209,40 +209,44 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const updates: string[] = [];
-    const values: any[] = [];
+    // Build update object
+    const updateFields: Record<string, any> = {};
 
     if (status) {
-      updates.push('status = $' + (values.length + 1));
-      values.push(status);
+      updateFields.status = status;
     }
 
     if (decision) {
-      updates.push('decision = $' + (values.length + 1));
-      values.push(decision);
-      updates.push('decision_date = NOW()');
+      updateFields.decision = decision;
+      updateFields.decision_date = new Date();
     }
 
     if (decisionNotes) {
-      updates.push('decision_notes = $' + (values.length + 1));
-      values.push(decisionNotes);
+      updateFields.decision_notes = decisionNotes;
     }
 
-    if (updates.length === 0) {
+    if (Object.keys(updateFields).length === 0) {
       return NextResponse.json(
         { error: 'No updates provided' },
         { status: 400 }
       );
     }
 
-    // Use raw SQL for dynamic updates
-    const query = `
-      UPDATE alternative_evaluations
-      SET ${updates.join(', ')}
-      WHERE id = $${values.length + 1}
-    `;
+    // Build the SET clause dynamically
+    const setClauses = Object.keys(updateFields).map(key => {
+      const value = updateFields[key];
+      if (value instanceof Date) {
+        return `${key} = NOW()`;
+      }
+      return `${key} = '${value.toString().replace(/'/g, "''")}'`; // Basic SQL escaping
+    }).join(', ');
 
-    await sql.query(query, [...values, evaluationId]);
+    // Execute update
+    await sql(`
+      UPDATE alternative_evaluations
+      SET ${setClauses}
+      WHERE id = '${evaluationId}'
+    `);
 
     return NextResponse.json({
       success: true,

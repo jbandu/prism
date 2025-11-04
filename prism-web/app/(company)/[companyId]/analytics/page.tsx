@@ -265,7 +265,7 @@ export default function AnalyticsPage({
             <Activity className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">No Usage Data</h3>
             <p className="text-gray-600 mb-4">
-              Click "Generate Sample Data" to create 90 days of sample usage data for testing
+              Click &ldquo;Generate Sample Data&rdquo; to create 90 days of sample usage data for testing
             </p>
             <Button onClick={handleGenerateData} disabled={generating}>
               {generating ? (

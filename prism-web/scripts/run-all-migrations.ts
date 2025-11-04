@@ -1,6 +1,12 @@
-import { sql } from '@vercel/postgres';
+import { neon } from '@neondatabase/serverless';
+import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
+
+// Load environment variables
+dotenv.config({ path: path.join(__dirname, '../.env.local') });
+
+const sql = neon(process.env.DATABASE_URL!);
 
 async function runMigration(filePath: string, name: string) {
   console.log(`\n🔄 Running migration: ${name}...`);
@@ -10,8 +16,15 @@ async function runMigration(filePath: string, name: string) {
     const sqlContent = fs.readFileSync(filePath, 'utf-8');
 
     // Execute the SQL
-    // Note: We need to execute this as raw SQL since it contains multiple statements
-    await sql.query(sqlContent);
+    // Note: Neon doesn't support multiple statements at once, so we need to split them
+    const statements = sqlContent
+      .split(';')
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+
+    for (const statement of statements) {
+      await sql(statement);
+    }
 
     console.log(`✅ Successfully ran migration: ${name}`);
     return { success: true, name };

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@vercel/postgres';
+import { sql } from '@/lib/db';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -26,14 +26,14 @@ export async function POST(request: NextRequest) {
       SELECT * FROM software WHERE id = ${softwareId} LIMIT 1
     `;
 
-    if (software.rows.length === 0) {
+    if (software.length === 0) {
       return NextResponse.json(
         { error: 'Software not found' },
         { status: 404 }
       );
     }
 
-    const softwareData = software.rows[0];
+    const softwareData = software[0];
     const licenseCount = softwareData.license_count || 10;
 
     // Generate usage logs
