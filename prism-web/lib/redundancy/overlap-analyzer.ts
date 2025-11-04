@@ -6,6 +6,7 @@
 import { neon } from '@neondatabase/serverless';
 import { extractFeaturesFromSoftware, saveFeaturesToDatabase } from './feature-extractor';
 import { generateConsolidationRecommendations } from './recommendation-engine';
+import { ProgressTracker } from './progress-tracker';
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -49,8 +50,13 @@ export interface AnalysisResult {
 /**
  * Main function to analyze a company's portfolio for overlaps
  */
-export async function analyzePortfolioOverlaps(companyId: string): Promise<AnalysisResult> {
+export async function analyzePortfolioOverlaps(
+  companyId: string,
+  progressTracker?: ProgressTracker
+): Promise<AnalysisResult> {
   console.log(`\n🔍 Starting portfolio overlap analysis for company ${companyId}...\n`);
+
+  progressTracker?.updateProgress('Loading Software', 5, 'Loading software portfolio...');
 
   // Step 1: Get all software for this company
   const companySoftware = await sql`
@@ -69,6 +75,7 @@ export async function analyzePortfolioOverlaps(companyId: string): Promise<Analy
 
   if (companySoftware.length < 2) {
     console.log('⚠️  Need at least 2 software products for overlap analysis');
+    progressTracker?.complete(0, 0);
     return {
       overlaps: [],
       comparisonMatrix: [],
@@ -78,12 +85,28 @@ export async function analyzePortfolioOverlaps(companyId: string): Promise<Analy
     };
   }
 
+  progressTracker?.updateProgress(
+    'Processing Software',
+    10,
+    `Analyzing ${companySoftware.length} software products...`,
+    { totalSoftware: companySoftware.length }
+  );
+
   // Step 2: Build software features map (using category-based analysis for now)
   const softwareFeatures = new Map<string, SoftwareWithFeatures>();
 
   console.log(`\n📊 Processing software products...`);
 
-  for (const software of companySoftware) {
+  for (let idx = 0; idx < companySoftware.length; idx++) {
+    const software = companySoftware[idx];
+
+    // Check for cancellation
+    if (progressTracker?.isCancelled()) {
+      console.log('⚠️  Analysis cancelled by user');
+      progressTracker.cancel();
+      throw new Error('Analysis cancelled by user');
+    }
+
     // For now, use category as a basic feature until we migrate schema
     // TODO: Migrate software_features_mapping to reference software_assets instead of software table
     const categoryFeature = {
@@ -100,18 +123,39 @@ export async function analyzePortfolioOverlaps(companyId: string): Promise<Analy
       category: software.category,
       features: [categoryFeature],
     });
+
+    // Update progress every few items
+    if (idx % 5 === 0 || idx === companySoftware.length - 1) {
+      const progress = 10 + ((idx + 1) / companySoftware.length) * 20;
+      progressTracker?.updateProgress(
+        'Processing Software',
+        progress,
+        `Processed ${idx + 1} of ${companySoftware.length} software products...`,
+        { processedSoftware: idx + 1 }
+      );
+    }
   }
 
   console.log(`  ✅ Processed ${softwareFeatures.size} software products`);
 
   console.log(`\n🔬 Analyzing overlaps between ${softwareFeatures.size} products...`);
+  progressTracker?.updateProgress('Analyzing Overlaps', 35, 'Comparing software for redundancies...');
 
   // Step 3: Compare all pairs and build comparison matrix
   const comparisonMatrix: OverlapResult[] = [];
 
   const softwareArray = Array.from(softwareFeatures.values());
+  const totalComparisons = (softwareArray.length * (softwareArray.length - 1)) / 2;
+  let comparisonsCompleted = 0;
 
   for (let i = 0; i < softwareArray.length; i++) {
+    // Check for cancellation
+    if (progressTracker?.isCancelled()) {
+      console.log('⚠️  Analysis cancelled by user');
+      progressTracker.cancel();
+      throw new Error('Analysis cancelled by user');
+    }
+
     for (let j = i + 1; j < softwareArray.length; j++) {
       const sw1 = softwareArray[i];
       const sw2 = softwareArray[j];
@@ -119,6 +163,18 @@ export async function analyzePortfolioOverlaps(companyId: string): Promise<Analy
       const sharedFeatures = findSharedFeatures(sw1.features, sw2.features);
       const totalFeatures = Math.max(sw1.features.length, sw2.features.length);
       const overlapPercentage = (sharedFeatures.length / totalFeatures) * 100;
+
+      comparisonsCompleted++;
+
+      // Update progress for comparisons
+      if (comparisonsCompleted % 10 === 0 || comparisonsCompleted === totalComparisons) {
+        const progress = 35 + (comparisonsCompleted / totalComparisons) * 40;
+        progressTracker?.updateProgress(
+          'Analyzing Overlaps',
+          progress,
+          `Compared ${comparisonsCompleted} of ${totalComparisons} software pairs...`
+        );
+      }
 
       if (overlapPercentage > 20) {
         // Significant overlap threshold
