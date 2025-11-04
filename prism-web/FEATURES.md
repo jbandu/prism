@@ -63,28 +63,51 @@ Admin portal for managing multiple client companies.
 
 ---
 
-### 3. Logo Management System
+### 3. Logo Management System ⚡ Enhanced
 **Status:** ✅ Production Ready
 **Implementation Date:** January 2025
+**Last Updated:** January 2025 (Famous Brands Enhancement)
 
 **Description:**
-Automatic logo fetching and display for companies and software vendors using external APIs with database caching.
+Automatic logo fetching and display for companies and software vendors using external APIs with database caching. Now includes instant recognition of 100+ famous brands.
 
 **Architecture:**
-Three-tier fallback system for maximum reliability:
-1. **Clearbit Logo API** (Primary) - High-quality company logos
-2. **Google Favicon API** (Fallback) - Universal favicon service
-3. **UI Avatars** (Final Fallback) - Generated initials placeholders
+Four-tier fallback system for maximum reliability:
+1. **Famous Brands Mapping** (NEW) ⚡ - Instant logo resolution for 100+ well-known brands (AWS, SAP, Slack, etc.)
+2. **Clearbit Logo API** - High-quality company logos via API
+3. **Google Favicon API** (Fallback) - Universal favicon service
+4. **UI Avatars** (Final Fallback) - Generated initials placeholders
+
+**Famous Brands Coverage (100+ brands):**
+- **Cloud Providers:** AWS, Azure, GCP, DigitalOcean, Heroku, Vercel, Netlify
+- **Enterprise Software:** SAP, Oracle, Salesforce, Workday, ServiceNow, Adobe, Microsoft
+- **Collaboration:** Slack, Zoom, Teams, Google Meet, Asana, Monday, Notion, Jira, Trello
+- **Development:** GitHub, GitLab, Docker, Jenkins, CircleCI, Datadog, New Relic
+- **Databases:** MongoDB, PostgreSQL, MySQL, Redis, Elasticsearch, Snowflake
+- **Security:** Okta, Auth0, OneLogin, Duo, CrowdStrike, Palo Alto
+- **Design:** Figma, Sketch, InVision, Canva
+- **Payment:** Stripe, PayPal, Square, QuickBooks
+- **Analytics:** Google Analytics, Mixpanel, Amplitude, Segment, HubSpot
+- **Other:** Dropbox, Box, Airtable, Zapier, Shopify, WordPress, Tableau, Power BI
+
+**Smart Name Matching:**
+- Case-insensitive matching ("AWS" = "aws" = "Aws")
+- Handles typos and variations ("awss" → AWS)
+- Alias support ("Google Cloud Platform" = "GCP" = "Google Cloud")
+- Normalized lookup (removes spaces, special characters)
 
 **Features:**
+- Instant logo display for famous brands (no API calls)
 - Automatic domain extraction from company names
 - Smart caching (7-day TTL) to reduce API calls
 - Loading states and error handling
 - Works with slugs, domains, and company names
 - Zero storage costs - URLs only
+- Fallback chain for maximum reliability
 
 **Components:**
-- `lib/logo-service.ts` - Core logo fetching logic
+- `lib/brand-logos.ts` - **NEW** Famous brands mapping with 100+ brands
+- `lib/logo-service.ts` - Core logo fetching logic with famous brands integration
 - `components/ui/logo-image.tsx` - Reusable LogoImage component
 - `/api/logos` - Logo caching API
 - `/api/dev/add-logo-columns` - Database migration
@@ -93,14 +116,20 @@ Three-tier fallback system for maximum reliability:
 ```sql
 -- Added to companies, software, software_catalog tables:
 logo_url TEXT
-logo_source VARCHAR(50)  -- 'clearbit', 'google', 'placeholder'
+logo_source VARCHAR(50)  -- 'famous', 'clearbit', 'google', 'placeholder'
 logo_cached_at TIMESTAMPTZ
 ```
 
 **Usage:**
 ```tsx
-<LogoImage name="BioRad" size={48} />
-<LogoImage name="Asana" website="asana.com" size={64} />
+// Instant recognition for famous brands
+<LogoImage name="AWS" size={48} />        // ⚡ Instant
+<LogoImage name="SAP" size={48} />        // ⚡ Instant
+<LogoImage name="Slack" size={48} />      // ⚡ Instant
+
+// Fallback to API for other companies
+<LogoImage name="BioRad" size={48} />     // API lookup
+<LogoImage name="Custom Corp" website="customcorp.com" size={64} />
 ```
 
 **Pages Using Logos:**

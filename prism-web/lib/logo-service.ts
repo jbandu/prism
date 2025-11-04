@@ -3,14 +3,17 @@
  * Fetches company/software logos from external APIs with fallback chain
  *
  * API Priority:
- * 1. Clearbit Logo API (high quality, free tier)
- * 2. Google Favicon API (fallback)
- * 3. Default placeholder
+ * 1. Famous brands mapping (instant, pre-configured)
+ * 2. Clearbit Logo API (high quality, free tier)
+ * 3. Google Favicon API (fallback)
+ * 4. Default placeholder
  */
+
+import { findBrandLogo } from './brand-logos';
 
 export interface LogoResult {
   url: string;
-  source: 'clearbit' | 'google' | 'placeholder';
+  source: 'famous' | 'clearbit' | 'google' | 'placeholder';
   cachedAt?: Date;
 }
 
@@ -106,7 +109,16 @@ function getPlaceholderUrl(name: string): string {
  * Returns the best available logo URL
  */
 export async function fetchLogo(companyName: string, websiteUrl?: string): Promise<LogoResult> {
-  // Try to extract domain from website URL first, then company name
+  // 1. Check famous brands first (instant, no API calls)
+  const famousBrand = findBrandLogo(companyName);
+  if (famousBrand) {
+    return {
+      url: famousBrand.logoUrl,
+      source: 'famous'
+    };
+  }
+
+  // 2. Try to extract domain from website URL first, then company name
   const domain = websiteUrl ? extractDomain(websiteUrl) : extractDomain(companyName);
 
   if (!domain) {
@@ -116,7 +128,7 @@ export async function fetchLogo(companyName: string, websiteUrl?: string): Promi
     };
   }
 
-  // Try Clearbit first (best quality)
+  // 3. Try Clearbit (best quality for non-famous brands)
   const clearbitUrl = await fetchFromClearbit(domain);
   if (clearbitUrl) {
     return {
@@ -125,7 +137,7 @@ export async function fetchLogo(companyName: string, websiteUrl?: string): Promi
     };
   }
 
-  // Fallback to Google Favicon
+  // 4. Fallback to Google Favicon
   return {
     url: getFaviconUrl(domain),
     source: 'google'

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Building2 } from 'lucide-react';
 import { extractDomain } from '@/lib/logo-service';
+import { findBrandLogo } from '@/lib/brand-logos';
 
 interface LogoImageProps {
   name: string;
@@ -29,10 +30,19 @@ export function LogoImage({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // 1. Check famous brands first (instant, pre-configured)
+    const famousBrand = findBrandLogo(name);
+    if (famousBrand) {
+      setLogoUrl(famousBrand.logoUrl);
+      setLoading(false);
+      return;
+    }
+
+    // 2. Try domain-based lookup
     const domain = website ? extractDomain(website) : extractDomain(name);
 
     if (domain) {
-      // Try Clearbit first
+      // Try Clearbit
       const clearbitUrl = `https://logo.clearbit.com/${domain}`;
       setLogoUrl(clearbitUrl);
     } else {

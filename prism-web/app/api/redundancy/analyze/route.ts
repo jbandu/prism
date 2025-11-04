@@ -8,6 +8,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { analyzePortfolioOverlaps } from '@/lib/redundancy/overlap-analyzer';
 import { getCompanyById, getCompanyBySlug } from '@/lib/db-utils';
+import { ProgressTracker } from '@/lib/redundancy/progress-tracker';
+import { sql } from '@/lib/db';
 
 /**
  * Resolve company slug or UUID to UUID
@@ -58,21 +60,54 @@ export async function POST(request: Request) {
     // Resolve slug to UUID if needed
     const resolvedCompanyId = await resolveCompanyId(companyId);
 
-    // Run the analysis
-    const results = await analyzePortfolioOverlaps(resolvedCompanyId);
+    // Get software count for progress tracking
+    const softwareCount = await sql`
+      SELECT COUNT(*) as count
+      FROM software_assets
+      WHERE company_id = ${resolvedCompanyId}
+      AND contract_status = 'active'
+    `;
+
+    const totalSoftware = parseInt(softwareCount[0]?.count || '0');
+
+    // Check if analysis is already in progress
+    const existingProgress = ProgressTracker.getProgress(resolvedCompanyId);
+    if (existingProgress && existingProgress.status === 'running') {
+      return NextResponse.json({
+        success: true,
+        message: 'Analysis already in progress',
+        status: 'running',
+      });
+    }
+
+    // Initialize progress tracker
+    const tracker = new ProgressTracker(resolvedCompanyId, totalSoftware);
+
+    // Run analysis asynchronously in the background
+    // Don't await - return immediately so client can start polling
+    analyzePortfolioOverlaps(resolvedCompanyId, tracker)
+      .then((results) => {
+        console.log(`✅ Analysis completed for ${resolvedCompanyId}`);
+        // Progress tracker already marked as complete in analyzePortfolioOverlaps
+      })
+      .catch((error) => {
+        console.error(`❌ Analysis failed for ${resolvedCompanyId}:`, error);
+        tracker.fail(error instanceof Error ? error.message : 'Analysis failed');
+      });
 
     return NextResponse.json({
       success: true,
-      data: results,
-      message: `Analysis complete. Found ${results.overlaps.length} category overlaps and $${results.totalRedundancyCost.toFixed(0)} in redundancy costs.`,
+      message: 'Analysis started',
+      status: 'running',
+      totalSoftware,
     });
   } catch (error) {
-    console.error('❌ Redundancy analysis failed:', error);
+    console.error('❌ Failed to start redundancy analysis:', error);
 
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Analysis failed',
+        error: error instanceof Error ? error.message : 'Failed to start analysis',
       },
       { status: 500 }
     );

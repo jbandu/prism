@@ -209,8 +209,17 @@ export async function analyzePortfolioOverlaps(
     }
   }
 
+  progressTracker?.updateProgress(
+    'Categorizing Overlaps',
+    80,
+    'Grouping overlaps by category...',
+    { overlapsFound: comparisonMatrix.length }
+  );
+
   // Step 4: Group overlaps by category
   const categoryOverlaps = await groupOverlapsByCategory(softwareFeatures, companyId);
+
+  progressTracker?.updateProgress('Saving Results', 85, 'Saving analysis results...');
 
   // Step 5: Save results to database (optional - may fail if tables don't exist)
   try {
@@ -221,6 +230,8 @@ export async function analyzePortfolioOverlaps(
     console.log(`  ⚠️  Could not save to database (tables may not exist): ${error instanceof Error ? error.message : 'Unknown error'}`);
     // Continue anyway - results can still be returned to client
   }
+
+  progressTracker?.updateProgress('Generating Recommendations', 90, 'Creating consolidation recommendations...');
 
   // Step 6: Generate consolidation recommendations
   console.log(`\n🎯 Generating consolidation recommendations...`);
@@ -242,6 +253,9 @@ export async function analyzePortfolioOverlaps(
   console.log(`   📊 Total redundancy cost: $${totalRedundancyCost.toFixed(0)}`);
   console.log(`   🔗 ${comparisonMatrix.length} significant overlaps detected`);
   console.log(`   💡 ${recommendations.length} consolidation opportunities identified\n`);
+
+  // Mark analysis as complete
+  progressTracker?.complete(comparisonMatrix.length, totalRedundancyCost);
 
   return {
     overlaps: categoryOverlaps,

@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { OverlapMatrix } from '@/components/redundancy/OverlapMatrix';
 import { ConsolidationCards } from '@/components/redundancy/ConsolidationCards';
+import { AnalysisProgressDisplay, AnalysisProgress } from '@/components/redundancy/AnalysisProgress';
 import { RefreshCw, TrendingDown, Layers, Target, DollarSign, Package } from 'lucide-react';
 import { LogoImage } from '@/components/ui/logo-image';
 
@@ -33,9 +34,20 @@ export default function RedundancyPage() {
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
+  const [progress, setProgress] = useState<AnalysisProgress | null>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     loadSoftware();
+  }, []);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
   }, []);
 
   const loadSoftware = async () => {
@@ -70,9 +82,57 @@ export default function RedundancyPage() {
     }
   };
 
+  const pollProgress = async () => {
+    try {
+      const res = await fetch(`/api/redundancy/progress?companyId=${companyId}`);
+      const result = await res.json();
+
+      if (result.success && result.data) {
+        setProgress(result.data);
+
+        // Stop polling if analysis is complete, failed, or cancelled
+        if (['completed', 'failed', 'cancelled'].includes(result.data.status)) {
+          stopPolling();
+          setAnalyzing(false);
+
+          // If completed successfully, load the analysis results
+          if (result.data.status === 'completed') {
+            setTimeout(() => {
+              loadAnalysis();
+            }, 500);
+          }
+        }
+      } else {
+        // No progress found - analysis may not have started or already finished
+        stopPolling();
+        setAnalyzing(false);
+      }
+    } catch (error) {
+      console.error('Failed to poll progress:', error);
+    }
+  };
+
+  const startPolling = () => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+    }
+    // Poll every 500ms for real-time updates
+    pollIntervalRef.current = setInterval(pollProgress, 500);
+  };
+
+  const stopPolling = () => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+  };
+
   const runAnalysis = async () => {
     try {
       setAnalyzing(true);
+      setProgress(null);
+      setAnalysis(null);
+
       const res = await fetch('/api/redundancy/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -82,12 +142,25 @@ export default function RedundancyPage() {
       const result = await res.json();
 
       if (result.success) {
-        setAnalysis(result.data);
+        // Analysis started - begin polling for progress
+        startPolling();
+      } else {
+        setAnalyzing(false);
+        console.error('Failed to start analysis:', result.error);
       }
     } catch (error) {
       console.error('Failed to run analysis:', error);
-    } finally {
       setAnalyzing(false);
+    }
+  };
+
+  const cancelAnalysis = async () => {
+    try {
+      await fetch(`/api/redundancy/progress?companyId=${companyId}`, {
+        method: 'DELETE',
+      });
+    } catch (error) {
+      console.error('Failed to cancel analysis:', error);
     }
   };
 
@@ -168,6 +241,13 @@ export default function RedundancyPage() {
             {analyzing ? 'Analyzing...' : analysis ? 'Re-analyze Portfolio' : 'Run Redundancy Analysis'}
           </button>
         </div>
+
+        {/* Progress Display */}
+        {analyzing && progress && (
+          <div className="mb-6">
+            <AnalysisProgressDisplay progress={progress} onCancel={cancelAnalysis} />
+          </div>
+        )}
 
         {software.length === 0 ? (
           <div className="text-center py-12">
