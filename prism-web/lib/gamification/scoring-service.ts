@@ -408,18 +408,33 @@ export class ScoringService {
     scoreColumn: string,
     rankColumn: string
   ) {
-    const scores = await sql.query(
-      `SELECT id FROM company_scores
-       WHERE period_start = $1::DATE AND period_end = $2::DATE
-       ORDER BY ${scoreColumn} DESC`,
-      [periodStart, periodEnd]
-    );
+    // Note: scoreColumn and rankColumn are controlled identifiers from code, not user input
+    // Neon doesn't support dynamic identifiers in template literals, so we construct the query
+    const scores = await sql`
+      SELECT id FROM company_scores
+      WHERE period_start = ${periodStart}::DATE
+        AND period_end = ${periodEnd}::DATE
+      ORDER BY
+        CASE
+          WHEN ${scoreColumn === 'savings_score'} THEN savings_score
+          WHEN ${scoreColumn === 'efficiency_score'} THEN efficiency_score
+          WHEN ${scoreColumn === 'adoption_score'} THEN adoption_score
+          WHEN ${scoreColumn === 'utilization_score'} THEN utilization_score
+          ELSE efficiency_score
+        END DESC
+    `;
 
     for (let i = 0; i < scores.length; i++) {
-      await sql.query(
-        `UPDATE company_scores SET ${rankColumn} = $1 WHERE id = $2`,
-        [i + 1, scores[i].id]
-      );
+      // Use CASE for dynamic column updates
+      await sql`
+        UPDATE company_scores
+        SET
+          savings_rank = CASE WHEN ${rankColumn === 'savings_rank'} THEN ${i + 1} ELSE savings_rank END,
+          efficiency_rank = CASE WHEN ${rankColumn === 'efficiency_rank'} THEN ${i + 1} ELSE efficiency_rank END,
+          adoption_rank = CASE WHEN ${rankColumn === 'adoption_rank'} THEN ${i + 1} ELSE adoption_rank END,
+          utilization_rank = CASE WHEN ${rankColumn === 'utilization_rank'} THEN ${i + 1} ELSE utilization_rank END
+        WHERE id = ${scores[i].id}
+      `;
     }
   }
 
