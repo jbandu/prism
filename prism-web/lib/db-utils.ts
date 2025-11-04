@@ -39,9 +39,15 @@ export async function createCompany(data: {
   industry: string;
   employee_count: number;
 }): Promise<Company> {
+  // Generate slug from company name
+  const slug = data.company_name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
   const result = await sql`
-    INSERT INTO companies (company_name, industry, employee_count)
-    VALUES (${data.company_name}, ${data.industry}, ${data.employee_count})
+    INSERT INTO companies (company_name, slug, industry, employee_count)
+    VALUES (${data.company_name}, ${slug}, ${data.industry}, ${data.employee_count})
     RETURNING *
   `;
   return result[0] as Company;

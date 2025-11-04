@@ -54,6 +54,8 @@ export default function CompaniesPage() {
   const [sortBy, setSortBy] = useState<"name" | "spend" | "savings" | "lastActive">("name");
   const [showAddClient, setShowAddClient] = useState(false);
   const [addClientStep, setAddClientStep] = useState(1);
+  const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   // Fetch companies from API
   useEffect(() => {
@@ -88,6 +90,62 @@ export default function CompaniesPage() {
       console.error('Error fetching companies:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateClient = async () => {
+    try {
+      setIsCreating(true);
+      setCreateError(null);
+
+      // Validate required fields
+      if (!newClient.companyName || !newClient.industry || !newClient.employeeCount) {
+        setCreateError("Please fill in all required fields");
+        return;
+      }
+
+      const response = await fetch('/api/companies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          company_name: newClient.companyName,
+          industry: newClient.industry,
+          employee_count: parseInt(newClient.employeeCount),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || result.message || 'Failed to create company');
+      }
+
+      // Success! Refresh the list and close the dialog
+      await fetchCompanies();
+      setShowAddClient(false);
+      setAddClientStep(1);
+
+      // Reset form
+      setNewClient({
+        companyName: "",
+        industry: "",
+        location: "",
+        employeeCount: "",
+        contactName: "",
+        contactEmail: "",
+        contactPhone: "",
+        contactTitle: "",
+        contractStatus: "prospect",
+        startDate: "",
+        contractValue: "",
+        billingFrequency: "monthly",
+        notes: ""
+      });
+    } catch (error) {
+      console.error('Failed to create company:', error);
+      setCreateError(error instanceof Error ? error.message : 'Failed to create company');
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -479,7 +537,13 @@ export default function CompaniesPage() {
       </Card>
 
       {/* Add Client Modal */}
-      <Dialog open={showAddClient} onOpenChange={setShowAddClient}>
+      <Dialog open={showAddClient} onOpenChange={(open) => {
+        setShowAddClient(open);
+        if (!open) {
+          setCreateError(null);
+          setAddClientStep(1);
+        }
+      }}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Add New Client</DialogTitle>
@@ -514,27 +578,36 @@ export default function CompaniesPage() {
 
           {renderAddClientForm()}
 
+          {createError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-800">{createError}</p>
+            </div>
+          )}
+
           <div className="flex justify-between pt-4 border-t">
             <Button
               variant="outline"
-              onClick={() => setAddClientStep(Math.max(1, addClientStep - 1))}
-              disabled={addClientStep === 1}
+              onClick={() => {
+                setAddClientStep(Math.max(1, addClientStep - 1));
+                setCreateError(null);
+              }}
+              disabled={addClientStep === 1 || isCreating}
             >
               Previous
             </Button>
             <Button
               onClick={() => {
                 if (addClientStep === 4) {
-                  // Handle client creation
-                  setShowAddClient(false);
-                  setAddClientStep(1);
+                  handleCreateClient();
                 } else {
                   setAddClientStep(addClientStep + 1);
+                  setCreateError(null);
                 }
               }}
               className="bg-prism-primary"
+              disabled={isCreating}
             >
-              {addClientStep === 4 ? "Create Client" : "Next"}
+              {isCreating ? "Creating..." : addClientStep === 4 ? "Create Client" : "Next"}
             </Button>
           </div>
         </DialogContent>
