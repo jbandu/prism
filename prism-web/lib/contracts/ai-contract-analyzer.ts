@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import pdfParse from 'pdf-parse';
+import * as pdfParse from 'pdf-parse';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -66,7 +66,8 @@ export interface RiskAlert {
  */
 export async function parsePDFContract(fileBuffer: Buffer): Promise<string> {
   try {
-    const data = await pdfParse(fileBuffer);
+    const parser = (pdfParse as any).default || pdfParse;
+    const data = await parser(fileBuffer);
     return data.text;
   } catch (error) {
     console.error('PDF parsing error:', error);

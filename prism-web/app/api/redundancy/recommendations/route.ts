@@ -7,7 +7,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getRecommendations } from '@/lib/redundancy/recommendation-engine';
-import { neon } from '@/lib/db';
+import { neon } from '@neondatabase/serverless';
 
 const sql = neon(process.env.DATABASE_URL!);
 

@@ -8,7 +8,7 @@
  * - Alternative suggestions
  */
 
-import { sql } from '@neondatabase/serverless';
+import { sql } from '@/lib/db';
 import { NotificationService } from './notification-service';
 
 export interface SoftwareRequestInput {
@@ -59,14 +59,14 @@ export class ApprovalWorkflow {
       let redundantWithSoftwareIds: string[] = [];
       let suggestedAlternatives: any[] = [];
 
-      if (existingSoftware.rows.length > 0) {
+      if (existingSoftware.length > 0) {
         redundancyDetected = true;
-        redundantWithSoftwareIds = existingSoftware.rows.map(s => s.id);
+        redundantWithSoftwareIds = existingSoftware.map(s => s.id);
         suggestedAlternatives.push({
           type: 'existing',
-          name: existingSoftware.rows[0].software_name,
-          vendor: existingSoftware.rows[0].vendor_name,
-          cost: existingSoftware.rows[0].annual_cost,
+          name: existingSoftware[0].software_name,
+          vendor: existingSoftware[0].vendor_name,
+          cost: existingSoftware[0].annual_cost,
           reason: 'Your company already has this software'
         });
       }
@@ -82,11 +82,11 @@ export class ApprovalWorkflow {
           LIMIT 3
         `;
 
-        if (similarSoftware.rows.length > 0) {
+        if (similarSoftware.length > 0) {
           redundancyDetected = true;
-          redundantWithSoftwareIds.push(...similarSoftware.rows.map(s => s.id));
+          redundantWithSoftwareIds.push(...similarSoftware.map(s => s.id));
           suggestedAlternatives.push(
-            ...similarSoftware.rows.map(s => ({
+            ...similarSoftware.map(s => ({
               type: 'similar',
               name: s.software_name,
               vendor: s.vendor_name,
@@ -137,7 +137,7 @@ export class ApprovalWorkflow {
         RETURNING id
       `;
 
-      const requestId = result.rows[0].id;
+      const requestId = result[0].id;
 
       // Get bot configuration
       const botConfig = await sql`
@@ -147,8 +147,8 @@ export class ApprovalWorkflow {
       `;
 
       // Send notification if bot is configured
-      if (botConfig.rows.length > 0 && botConfig.rows[0].enabled) {
-        const config = botConfig.rows[0];
+      if (botConfig.length > 0 && botConfig[0].enabled) {
+        const config = botConfig[0];
         const notificationResult = await NotificationService.sendSoftwareRequest(
           {
             id: requestId,
@@ -323,7 +323,7 @@ export class ApprovalWorkflow {
       ORDER BY r.created_at DESC
     `;
 
-    return result.rows;
+    return result;
   }
 
   /**
@@ -335,7 +335,7 @@ export class ApprovalWorkflow {
       WHERE id = ${requestId}
     `;
 
-    if (request.rows.length === 0) {
+    if (request.length === 0) {
       return null;
     }
 
@@ -352,9 +352,9 @@ export class ApprovalWorkflow {
     `;
 
     return {
-      request: request.rows[0],
-      comments: comments.rows,
-      actions: actions.rows
+      request: request[0],
+      comments: comments,
+      actions: actions
     };
   }
 
@@ -380,7 +380,7 @@ export class ApprovalWorkflow {
           AND LOWER(software_name) = LOWER(${detectionData.softwareName})
       `;
 
-      if (existing.rows.length > 0) {
+      if (existing.length > 0) {
         // Not shadow IT, already tracked
         return {
           success: false,
@@ -434,7 +434,7 @@ export class ApprovalWorkflow {
         RETURNING id
       `;
 
-      const detectionId = result.rows[0].id;
+      const detectionId = result[0].id;
 
       // Get bot configuration and send alert
       const botConfig = await sql`
@@ -443,8 +443,8 @@ export class ApprovalWorkflow {
         WHERE company_id = ${companyId}
       `;
 
-      if (botConfig.rows.length > 0 && botConfig.rows[0].enabled) {
-        const config = botConfig.rows[0];
+      if (botConfig.length > 0 && botConfig[0].enabled) {
+        const config = botConfig[0];
         const notificationResult = await NotificationService.sendShadowITAlert(
           {
             id: detectionId,

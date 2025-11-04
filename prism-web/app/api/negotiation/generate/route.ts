@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions, canAccessCompany } from '@/lib/auth';
 import { generateNegotiationPlaybook } from '@/lib/negotiation/ai-negotiation-service';
-import { neon } from '@/lib/db';
+import { neon } from '@neondatabase/serverless';
 
 const sql = neon(process.env.DATABASE_URL!);
 
