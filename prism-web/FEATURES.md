@@ -359,10 +359,10 @@ Best regards,"
 ---
 
 ### 5. Redundancy Analysis
-**Status:** ✅ Production Ready
+**Status:** ✅ Production Ready with Real-Time Progress Tracking
 
 **Description:**
-AI-powered analysis to identify overlapping software features and consolidation opportunities.
+AI-powered analysis to identify overlapping software features and consolidation opportunities with real-time progress tracking and cancellation support.
 
 **Capabilities:**
 - Feature overlap detection across software portfolio
@@ -371,11 +371,17 @@ AI-powered analysis to identify overlapping software features and consolidation 
 - AI-generated consolidation recommendations
 - Potential savings calculations
 - Accept/reject recommendation workflow
+- **Real-time progress tracking with time estimates**
+- **Cancellable analysis with graceful shutdown**
+- **Adaptive UI showing only relevant information**
 
 **Key Components:**
-- `/api/redundancy/analyze` - AI analysis engine
-- `/[companyId]/redundancy` - Redundancy analysis page
-- `lib/redundancy/overlap-analyzer.ts` - Feature comparison logic
+- `/api/redundancy/analyze` - Asynchronous AI analysis engine
+- `/api/redundancy/progress` - Real-time progress polling endpoint
+- `/[companyId]/redundancy` - Redundancy analysis page with progress UI
+- `lib/redundancy/overlap-analyzer.ts` - Feature comparison logic with progress hooks
+- `lib/redundancy/progress-tracker.ts` - In-memory progress tracking
+- `components/redundancy/AnalysisProgress.tsx` - Real-time progress display
 - `components/redundancy/OverlapMatrix.tsx` - Visual heatmap
 - `components/redundancy/ConsolidationCards.tsx` - Recommendation cards
 
@@ -385,6 +391,15 @@ AI-powered analysis to identify overlapping software features and consolidation 
 - `feature_comparison_matrix` - Pairwise software comparisons
 - `consolidation_recommendations` - AI recommendations
 
+**Progress Tracking:**
+- 6-stage progress updates (Loading, Processing, Analyzing, Categorizing, Saving, Generating)
+- Percentage complete (0-100%)
+- Estimated time remaining (calculated dynamically)
+- Elapsed time tracking
+- Live counts: processed software, overlaps found
+- Cancellation requests with graceful shutdown
+- Status indicators: queued, running, completed, failed, cancelled
+
 **Metrics Displayed:**
 - Total redundancy cost (duplicate feature spend)
 - Number of overlapping feature categories
@@ -392,10 +407,18 @@ AI-powered analysis to identify overlapping software features and consolidation 
 - Potential annual savings
 
 **Visual Components:**
-- Software portfolio cards with logos
+- Software portfolio cards with logos (collapsible when results shown)
+- Real-time progress bar with animations
 - Feature overlap heatmap
 - Category overlap breakdown
 - Consolidation opportunity cards
+
+**UX Optimizations:**
+- Portfolio grid hidden during analysis (reduces information overload)
+- Progress-only view during analysis with portfolio summary stats
+- Results displayed first after completion (portfolio collapsed)
+- Expandable portfolio section (one-click to view all products)
+- Re-analyze button always accessible in header
 
 ---
 
