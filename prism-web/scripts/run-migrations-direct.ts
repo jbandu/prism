@@ -6,7 +6,7 @@ import * as dotenv from 'dotenv';
 // Load environment variables
 dotenv.config({ path: '.env.local' });
 
-async function runMigration(sql: ReturnType<typeof neon>, filePath: string, name: string) {
+async function runMigration(sql: any, filePath: string, name: string) {
   console.log(`\n🔄 Running migration: ${name}...`);
 
   try {
