@@ -401,7 +401,10 @@ export class ApprovalWorkflow {
       }
       if (!detectionData.vendorName) {
         riskFactors.push('Unknown vendor');
-        riskLevel = riskLevel === 'low' ? 'medium' : riskLevel;
+        // Bump risk level if not already critical or high
+        if (riskLevel === 'medium') {
+          riskLevel = 'high';
+        }
       }
 
       riskFactors.push('No contract', 'Potential security concern', 'Unapproved purchase');
