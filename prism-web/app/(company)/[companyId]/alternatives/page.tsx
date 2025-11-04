@@ -6,6 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -32,9 +39,12 @@ import {
   CheckCircle,
   AlertCircle,
   Clock,
-  Zap
+  Zap,
+  Sparkles,
+  RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
+import { AlternativesComparison } from "@/components/alternatives/AlternativesComparison";
 
 interface Alternative {
   id: string;
@@ -56,6 +66,16 @@ interface Alternative {
   recommendation_reasoning: string;
 }
 
+interface SoftwareItem {
+  id: string;
+  software_name: string;
+  vendor_name: string;
+  category: string;
+  annual_cost: number;
+  license_count: number;
+  active_users: number;
+}
+
 export default function AlternativesPage({
   params,
 }: {
@@ -66,8 +86,16 @@ export default function AlternativesPage({
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
 
+  // AI Discovery State
+  const [showDiscoveryDialog, setShowDiscoveryDialog] = useState(false);
+  const [portfolioSoftware, setPortfolioSoftware] = useState<SoftwareItem[]>([]);
+  const [selectedSoftware, setSelectedSoftware] = useState<string>("");
+  const [discovering, setDiscovering] = useState(false);
+  const [discoveredAlternatives, setDiscoveredAlternatives] = useState<any>(null);
+
   useEffect(() => {
     fetchAlternatives();
+    fetchPortfolioSoftware();
   }, [params.companyId]);
 
   const fetchAlternatives = async () => {
@@ -94,6 +122,146 @@ export default function AlternativesPage({
       toast.error("Failed to load alternatives");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPortfolioSoftware = async () => {
+    try {
+      // Fetch company to get ID
+      const companyResponse = await fetch(`/api/companies/${params.companyId}`);
+      const companyResult = await companyResponse.json();
+
+      if (companyResult.success && companyResult.data) {
+        const companyId = companyResult.data.id;
+
+        // Fetch software portfolio
+        const softwareResponse = await fetch(`/api/software?companyId=${companyId}`);
+        const softwareResult = await softwareResponse.json();
+
+        if (softwareResult.success) {
+          setPortfolioSoftware(softwareResult.data || []);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching portfolio:", error);
+    }
+  };
+
+  const handleDiscoverAlternatives = async () => {
+    if (!selectedSoftware) {
+      toast.error("Please select a software");
+      return;
+    }
+
+    setDiscovering(true);
+    setShowDiscoveryDialog(true);
+    setDiscoveredAlternatives(null);
+
+    toast.info("🤖 AI is analyzing alternatives...", {
+      description: "This may take 10-20 seconds"
+    });
+
+    try {
+      const response = await fetch('/api/alternatives/discover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          softwareId: selectedSoftware,
+          maxResults: 5
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setDiscoveredAlternatives(result.data);
+        toast.success("✨ Alternatives discovered!", {
+          description: `Found ${result.data.alternatives.length} viable alternatives`
+        });
+      } else {
+        toast.error("Failed to discover alternatives");
+        setShowDiscoveryDialog(false);
+      }
+    } catch (error) {
+      console.error("Discovery error:", error);
+      toast.error("Failed to discover alternatives");
+      setShowDiscoveryDialog(false);
+    } finally {
+      setDiscovering(false);
+    }
+  };
+
+  const handleSaveEvaluation = async (alternativeIndex: number) => {
+    if (!discoveredAlternatives) return;
+
+    const alternative = discoveredAlternatives.alternatives[alternativeIndex];
+    const currentSoftware = discoveredAlternatives.current_software;
+
+    try {
+      // Get company ID
+      const companyResponse = await fetch(`/api/companies/${params.companyId}`);
+      const companyResult = await companyResponse.json();
+
+      if (!companyResult.success) {
+        throw new Error("Failed to get company ID");
+      }
+
+      const companyId = companyResult.data.id;
+
+      // Find the alternative_id in software_alternatives table
+      // For now, we'll create the evaluation without it since we just generated these
+      const response = await fetch('/api/alternatives/evaluate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companyId: companyId,
+          currentSoftwareId: currentSoftware.id,
+          alternativeId: alternative.id || 'temp-id', // Will need to fetch from DB after saving to software_alternatives
+
+          currentAnnualCost: alternative.roi.current_annual_cost,
+          currentLicenseCount: currentSoftware.license_count,
+          currentUtilizationRate: (currentSoftware.active_users / currentSoftware.license_count) * 100,
+
+          projectedAnnualCost: alternative.roi.projected_annual_cost,
+          projectedLicenseCount: currentSoftware.license_count,
+
+          annualSavings: alternative.roi.annual_savings,
+          totalCostOfOwnership3yr: alternative.roi.total_cost_of_ownership_3yr,
+          breakEvenMonths: alternative.roi.break_even_months,
+          roiPercentage: alternative.roi.roi_percentage,
+
+          trainingCost: alternative.roi.training_cost,
+          migrationCost: alternative.roi.migration_cost,
+          integrationCost: alternative.roi.integration_cost,
+          productivityLossCost: alternative.roi.productivity_loss_cost,
+          totalHiddenCosts: alternative.roi.total_hidden_costs,
+
+          riskLevel: alternative.roi.risk_level,
+          riskFactors: alternative.roi.risk_factors,
+          mitigationStrategies: alternative.roi.mitigation_strategies,
+
+          recommendation: alternative.roi.annual_savings > 10000 ? 'highly_recommended' :
+                         alternative.roi.annual_savings > 5000 ? 'recommended' :
+                         alternative.roi.annual_savings > 0 ? 'consider' : 'not_recommended',
+          decisionRationale: alternative.ai_summary,
+          keyConsiderations: [...alternative.pros, ...alternative.cons],
+
+          status: 'under_review'
+        })
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to save evaluation');
+      }
+
+      // Refresh alternatives list
+      await fetchAlternatives();
+
+    } catch (error) {
+      console.error("Save evaluation error:", error);
+      throw error;
     }
   };
 
@@ -192,6 +360,58 @@ export default function AlternativesPage({
           Export
         </Button>
       </div>
+
+      {/* AI Discovery Section */}
+      <Card className="bg-gradient-to-r from-purple-50 to-blue-50 border-prism-primary border-2">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-6 h-6 text-prism-primary" />
+            <CardTitle className="text-xl">Discover Better Alternatives with AI</CardTitle>
+          </div>
+          <CardDescription>
+            Select any software from your portfolio and let AI find better, cheaper alternatives with detailed ROI analysis
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4">
+            <Select value={selectedSoftware} onValueChange={setSelectedSoftware}>
+              <SelectTrigger className="flex-1 bg-white">
+                <SelectValue placeholder="Select software to analyze..." />
+              </SelectTrigger>
+              <SelectContent>
+                {portfolioSoftware.length === 0 ? (
+                  <SelectItem value="none" disabled>No software in portfolio</SelectItem>
+                ) : (
+                  portfolioSoftware.map((software) => (
+                    <SelectItem key={software.id} value={software.id}>
+                      {software.software_name} ({software.vendor_name}) - $
+                      {software.annual_cost?.toLocaleString() || 0}/yr
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+            <Button
+              size="lg"
+              onClick={handleDiscoverAlternatives}
+              disabled={!selectedSoftware || discovering}
+              className="px-8"
+            >
+              {discovering ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Discovering...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Discover Alternatives
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -459,6 +679,57 @@ export default function AlternativesPage({
           </div>
         </CardContent>
       </Card>
+
+      {/* AI Discovery Results Dialog */}
+      <Dialog open={showDiscoveryDialog} onOpenChange={setShowDiscoveryDialog}>
+        <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-prism-primary" />
+              AI-Discovered Alternatives
+            </DialogTitle>
+            <DialogDescription>
+              Comprehensive analysis of alternative software options with ROI calculations
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-4">
+            {discovering ? (
+              <div className="flex flex-col items-center justify-center py-16">
+                <RefreshCw className="w-16 h-16 text-prism-primary animate-spin mb-4" />
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  AI is Analyzing Alternatives
+                </h3>
+                <p className="text-gray-600 mb-4">This may take 10-20 seconds...</p>
+                <div className="space-y-2 text-sm text-gray-500">
+                  <p className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    Analyzing feature compatibility
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    Calculating ROI and savings
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    Assessing migration complexity
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    Evaluating market position
+                  </p>
+                </div>
+              </div>
+            ) : discoveredAlternatives ? (
+              <AlternativesComparison
+                currentSoftware={discoveredAlternatives.current_software}
+                alternatives={discoveredAlternatives.alternatives}
+                onSaveEvaluation={handleSaveEvaluation}
+              />
+            ) : null}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
