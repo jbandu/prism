@@ -72,22 +72,22 @@ export async function GET(request: NextRequest) {
           AND cs.period_end = ${periodEnd}::DATE
       `;
 
-      if (userResult.rows.length > 0) {
-        userCompany = userResult.rows[0];
+      if (userResult.length > 0) {
+        userCompany = userResult[0];
       }
     }
 
     // Calculate summary stats
-    const totalCompanies = leaderboard.rows.length;
-    const totalSavings = leaderboard.rows.reduce((sum, row) => sum + parseFloat(row.total_savings || 0), 0);
+    const totalCompanies = leaderboard.length;
+    const totalSavings = leaderboard.reduce((sum, row) => sum + parseFloat(row.total_savings || 0), 0);
     const avgEfficiency = totalCompanies > 0
-      ? leaderboard.rows.reduce((sum, row) => sum + parseInt(row.efficiency_score || 0), 0) / totalCompanies
+      ? leaderboard.reduce((sum, row) => sum + parseInt(row.efficiency_score || 0), 0) / totalCompanies
       : 0;
 
     return NextResponse.json({
       success: true,
       data: {
-        leaderboard: leaderboard.rows,
+        leaderboard: leaderboard,
         userCompany,
         summary: {
           totalCompanies,

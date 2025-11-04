@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
         AND period_end = ${periodEnd}::DATE
     `;
 
-    if (currentScore.rows.length === 0) {
+    if (currentScore.length === 0) {
       return NextResponse.json({
         success: true,
         data: null,
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
     `;
 
     // Calculate trends
-    const scoreData = currentScore.rows[0];
+    const scoreData = currentScore[0];
     const trends = {
       efficiencyChange: scoreData.previous_rank ? scoreData.efficiency_score - scoreData.previous_rank : 0,
       rankChange: scoreData.rank_change || 0,
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
       success: true,
       data: {
         current: scoreData,
-        historical: historicalScores.rows,
+        historical: historicalScores,
         trends
       }
     });

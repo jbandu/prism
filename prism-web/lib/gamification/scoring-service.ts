@@ -163,8 +163,8 @@ export class ScoringService {
     `;
 
     // Update overall rankings
-    for (let i = 0; i < scores.rows.length; i++) {
-      const score = scores.rows[i];
+    for (let i = 0; i < scores.length; i++) {
+      const score = scores[i];
       const rank = i + 1;
 
       // Get previous rank
@@ -177,7 +177,7 @@ export class ScoringService {
         LIMIT 1
       `;
 
-      const previousRank = previousScore.rows.length > 0 ? previousScore.rows[0].overall_rank : null;
+      const previousRank = previousScore.length > 0 ? previousScore[0].overall_rank : null;
       const rankChange = previousRank ? previousRank - rank : 0;
 
       // Update this score record
@@ -212,9 +212,9 @@ export class ScoringService {
       LIMIT 1
     `;
 
-    if (score.rows.length === 0) return;
+    if (score.length === 0) return;
 
-    const metrics = score.rows[0];
+    const metrics = score[0];
 
     // Get all achievements
     const achievements = await sql`
@@ -224,7 +224,7 @@ export class ScoringService {
     `;
 
     // Check each achievement
-    for (const achievement of achievements.rows) {
+    for (const achievement of achievements) {
       const hasAchievement = await sql`
         SELECT id
         FROM company_achievements
@@ -232,7 +232,7 @@ export class ScoringService {
           AND achievement_id = ${achievement.id}
       `;
 
-      if (hasAchievement.rows.length > 0) continue; // Already earned
+      if (hasAchievement.length > 0) continue; // Already earned
 
       // Check if requirements are met
       const earned = this.checkAchievementRequirement(achievement, metrics);
@@ -415,10 +415,10 @@ export class ScoringService {
       [periodStart, periodEnd]
     );
 
-    for (let i = 0; i < scores.rows.length; i++) {
+    for (let i = 0; i < scores.length; i++) {
       await sql.query(
         `UPDATE company_scores SET ${rankColumn} = $1 WHERE id = $2`,
-        [i + 1, scores.rows[i].id]
+        [i + 1, scores[i].id]
       );
     }
   }
@@ -436,7 +436,7 @@ export class ScoringService {
         AND verified = true
     `;
 
-    return { total: parseFloat(result.rows[0]?.total || '0') };
+    return { total: parseFloat(result[0]?.total || '0') };
   }
 
   private static async getSoftwareData(companyId: string) {
@@ -450,8 +450,8 @@ export class ScoringService {
     `;
 
     return {
-      total: parseInt(result.rows[0]?.total || '0'),
-      redundant: parseInt(result.rows[0]?.redundant || '0'),
+      total: parseInt(result[0]?.total || '0'),
+      redundant: parseInt(result[0]?.redundant || '0'),
       redundanciesResolved: 0
     };
   }
@@ -470,10 +470,10 @@ export class ScoringService {
     `;
 
     return {
-      total: parseInt(result.rows[0]?.total || '0'),
-      reviewed: parseInt(result.rows[0]?.reviewed || '0'),
-      negotiated: parseInt(result.rows[0]?.negotiated || '0'),
-      criticalRisks: parseInt(result.rows[0]?.criticalrisks || '0')
+      total: parseInt(result[0]?.total || '0'),
+      reviewed: parseInt(result[0]?.reviewed || '0'),
+      negotiated: parseInt(result[0]?.negotiated || '0'),
+      criticalRisks: parseInt(result[0]?.criticalrisks || '0')
     };
   }
 
@@ -487,8 +487,8 @@ export class ScoringService {
     `;
 
     return {
-      totalLicenses: parseInt(result.rows[0]?.totallicenses || '0'),
-      totalActive: parseInt(result.rows[0]?.totalactive || '0')
+      totalLicenses: parseInt(result[0]?.totallicenses || '0'),
+      totalActive: parseInt(result[0]?.totalactive || '0')
     };
   }
 
@@ -503,9 +503,9 @@ export class ScoringService {
     `;
 
     return {
-      detected: parseInt(result.rows[0]?.detected || '0'),
-      active: parseInt(result.rows[0]?.active || '0'),
-      resolved: parseInt(result.rows[0]?.resolved || '0')
+      detected: parseInt(result[0]?.detected || '0'),
+      active: parseInt(result[0]?.active || '0'),
+      resolved: parseInt(result[0]?.resolved || '0')
     };
   }
 
@@ -526,13 +526,13 @@ export class ScoringService {
 
     return {
       companyId,
-      totalSavings: parseFloat(savings.rows[0]?.total || '0'),
-      totalSpend: parseFloat(totalSpend.rows[0]?.total || '0'),
-      softwareCount: parseInt(software.rows[0]?.total || '0'),
-      optimizedSoftwareCount: parseInt(software.rows[0]?.optimized || '0'),
-      contractsReviewed: parseInt(contracts.rows[0]?.total || '0'),
-      alternativesEvaluated: parseInt(alternatives.rows[0]?.total || '0'),
-      approvalsProcessed: parseInt(approvals.rows[0]?.total || '0')
+      totalSavings: parseFloat(savings[0]?.total || '0'),
+      totalSpend: parseFloat(totalSpend[0]?.total || '0'),
+      softwareCount: parseInt(software[0]?.total || '0'),
+      optimizedSoftwareCount: parseInt(software[0]?.optimized || '0'),
+      contractsReviewed: parseInt(contracts[0]?.total || '0'),
+      alternativesEvaluated: parseInt(alternatives[0]?.total || '0'),
+      approvalsProcessed: parseInt(approvals[0]?.total || '0')
     };
   }
 }

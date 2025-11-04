@@ -44,11 +44,11 @@ export async function GET(request: NextRequest) {
     const events = await query;
 
     // Calculate totals
-    const totalAnnual = events.rows.reduce((sum, event) => sum + parseFloat(event.annual_savings || 0), 0);
-    const totalMonthly = events.rows.reduce((sum, event) => sum + parseFloat(event.monthly_savings || 0), 0);
+    const totalAnnual = events.reduce((sum, event) => sum + parseFloat(event.annual_savings || 0), 0);
+    const totalMonthly = events.reduce((sum, event) => sum + parseFloat(event.monthly_savings || 0), 0);
 
     // Group by type
-    const byType = events.rows.reduce((acc: any, event: any) => {
+    const byType = events.reduce((acc: any, event: any) => {
       const type = event.event_type;
       if (!acc[type]) {
         acc[type] = { count: 0, savings: 0, events: [] };
@@ -62,11 +62,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        events: events.rows,
+        events: events,
         totals: {
           annualSavings: totalAnnual,
           monthlySavings: totalMonthly,
-          eventCount: events.rows.length
+          eventCount: events.length
         },
         byType
       }

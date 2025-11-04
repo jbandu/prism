@@ -73,19 +73,19 @@ export async function GET(request: NextRequest) {
       `;
 
       // Calculate total points
-      const totalPoints = earned.rows.reduce((sum, row) => sum + (row.points_awarded || 0), 0);
+      const totalPoints = earned.reduce((sum, row) => sum + (row.points_awarded || 0), 0);
 
       return NextResponse.json({
         success: true,
         data: {
-          earned: earned.rows,
-          all: allAchievements.rows,
+          earned: earned,
+          all: allAchievements,
           stats: {
-            totalEarned: earned.rows.length,
-            totalAvailable: allAchievements.rows.length,
+            totalEarned: earned.length,
+            totalAvailable: allAchievements.length,
             totalPoints,
-            completionRate: allAchievements.rows.length > 0
-              ? (earned.rows.length / allAchievements.rows.length) * 100
+            completionRate: allAchievements.length > 0
+              ? (earned.length / allAchievements.length) * 100
               : 0
           }
         }
@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
       const achievements = await query;
 
       // Group by category
-      const byCategory = achievements.rows.reduce((acc: any, achievement: any) => {
+      const byCategory = achievements.reduce((acc: any, achievement: any) => {
         const cat = achievement.achievement_category;
         if (!acc[cat]) acc[cat] = [];
         acc[cat].push(achievement);
@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         success: true,
         data: {
-          achievements: achievements.rows,
+          achievements: achievements,
           byCategory
         }
       });
