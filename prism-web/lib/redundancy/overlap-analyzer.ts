@@ -78,54 +78,19 @@ export async function analyzePortfolioOverlaps(companyId: string): Promise<Analy
     };
   }
 
-  // Step 2: Get or extract features for each software
+  // Step 2: Build software features map (using category-based analysis for now)
   const softwareFeatures = new Map<string, SoftwareWithFeatures>();
 
+  console.log(`\n📊 Processing software products...`);
+
   for (const software of companySoftware) {
-    console.log(`\n📊 Processing: ${software.software_name}`);
-
-    // Check if features exist in catalog
-    const catalogEntry = await sql`
-      SELECT id FROM software_catalog WHERE software_name = ${software.software_name}
-    `;
-
-    if (catalogEntry.length === 0) {
-      // Extract features using AI
-      console.log(`  🤖 Extracting features using AI...`);
-      try {
-        const extracted = await extractFeaturesFromSoftware(
-          software.software_name,
-          software.vendor_name
-        );
-        await saveFeaturesToDatabase(extracted);
-      } catch (error) {
-        console.error(`  ❌ Failed to extract features: ${error}`);
-        continue;
-      }
-    }
-
-    // Get features from database (check both catalog and direct mapping)
-    let features = await sql`
-      SELECT sfm.feature_name, fc.category_name, '' as description
-      FROM software_features_mapping sfm
-      JOIN feature_categories fc ON sfm.feature_category_id = fc.id
-      WHERE sfm.software_id = ${software.id}
-      ORDER BY fc.category_name, sfm.feature_name
-    `;
-
-    // If no features in mapping, try catalog
-    if (features.length === 0) {
-      features = await sql`
-        SELECT sf.feature_name, fc.category_name, sf.feature_description as description
-        FROM software_features sf
-        JOIN feature_categories fc ON sf.feature_category_id = fc.id
-        JOIN software_catalog sc ON sf.software_catalog_id = sc.id
-        WHERE sc.software_name = ${software.software_name}
-        ORDER BY fc.category_name, sf.feature_name
-      `;
-    }
-
-    console.log(`  ✅ Found ${features.length} features`);
+    // For now, use category as a basic feature until we migrate schema
+    // TODO: Migrate software_features_mapping to reference software_assets instead of software table
+    const categoryFeature = {
+      feature_name: software.category,
+      category_name: software.category,
+      description: `${software.category} functionality`,
+    };
 
     softwareFeatures.set(software.id, {
       id: software.id,
@@ -133,13 +98,11 @@ export async function analyzePortfolioOverlaps(companyId: string): Promise<Analy
       vendor_name: software.vendor_name,
       annual_cost: parseFloat(software.annual_cost || 0),
       category: software.category,
-      features: features.map(f => ({
-        feature_name: f.feature_name,
-        category_name: f.category_name,
-        description: f.description || '',
-      })),
+      features: [categoryFeature],
     });
   }
+
+  console.log(`  ✅ Processed ${softwareFeatures.size} software products`);
 
   console.log(`\n🔬 Analyzing overlaps between ${softwareFeatures.size} products...`);
 
