@@ -15,6 +15,7 @@ export interface AnalysisProgress {
   startTime: number;
   message: string;
   cancellationRequested: boolean;
+  results?: any; // Store analysis results when complete
 }
 
 // In-memory store for progress tracking
@@ -73,7 +74,7 @@ export class ProgressTracker {
     this.stepStartTime = Date.now();
   }
 
-  complete(overlapsFound: number, totalRedundancyCost: number) {
+  complete(overlapsFound: number, totalRedundancyCost: number, results?: any) {
     const existing = progressStore.get(this.companyId);
     if (!existing) return;
 
@@ -85,12 +86,13 @@ export class ProgressTracker {
       overlapsFound,
       estimatedTimeRemaining: 0,
       message: `Analysis complete! Found ${overlapsFound} overlaps with $${totalRedundancyCost.toFixed(0)} in redundancy costs.`,
+      results, // Store the full analysis results
     });
 
-    // Clean up after 5 minutes
+    // Clean up after 30 minutes (give time for user to view results)
     setTimeout(() => {
       progressStore.delete(this.companyId);
-    }, 5 * 60 * 1000);
+    }, 30 * 60 * 1000);
   }
 
   fail(error: string) {

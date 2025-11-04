@@ -5,7 +5,8 @@ import { useParams } from 'next/navigation';
 import { OverlapMatrix } from '@/components/redundancy/OverlapMatrix';
 import { ConsolidationCards } from '@/components/redundancy/ConsolidationCards';
 import { AnalysisProgressDisplay, AnalysisProgress } from '@/components/redundancy/AnalysisProgress';
-import { RefreshCw, TrendingDown, Layers, Target, DollarSign, Package, ChevronDown } from 'lucide-react';
+import FeatureTagging from '@/components/software/FeatureTagging';
+import { RefreshCw, TrendingDown, Layers, Target, DollarSign, Package, ChevronDown, Tag, X } from 'lucide-react';
 import { LogoImage } from '@/components/ui/logo-image';
 
 interface AnalysisData {
@@ -34,8 +35,10 @@ export default function RedundancyPage() {
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
+  const [extractingFeatures, setExtractingFeatures] = useState(false);
   const [progress, setProgress] = useState<AnalysisProgress | null>(null);
   const [showPortfolio, setShowPortfolio] = useState(true);
+  const [selectedSoftwareForTagging, setSelectedSoftwareForTagging] = useState<Software | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -96,11 +99,11 @@ export default function RedundancyPage() {
           stopPolling();
           setAnalyzing(false);
 
-          // If completed successfully, load the analysis results
-          if (result.data.status === 'completed') {
+          // If completed successfully, use the stored analysis results
+          if (result.data.status === 'completed' && result.data.results) {
             setTimeout(() => {
               setShowPortfolio(false); // Collapse portfolio to show results first
-              loadAnalysis();
+              setAnalysis(result.data.results); // Use stored results directly
             }, 500);
           }
         }
@@ -202,6 +205,36 @@ export default function RedundancyPage() {
     return analysis.recommendations.reduce((sum, r) => sum + r.annual_savings, 0);
   };
 
+  const extractFeaturesFromDescriptions = async () => {
+    try {
+      setExtractingFeatures(true);
+      const res = await fetch('/api/redundancy/extract-features', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companyId,
+          minConfidence: 0.6,
+          overwriteExisting: false,
+          method: 'description'
+        })
+      });
+
+      const result = await res.json();
+      if (result.success) {
+        alert(`✅ Feature extraction complete!\n\nProcessed ${result.data.processed} software products\nAdded ${result.data.featuresAdded} features`);
+        // Optionally reload software to show updated feature counts
+        await loadSoftware();
+      } else {
+        alert(`❌ Feature extraction failed: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Failed to extract features:', error);
+      alert('❌ Failed to extract features');
+    } finally {
+      setExtractingFeatures(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -274,14 +307,25 @@ export default function RedundancyPage() {
                 {software.length} software products • ${(software.reduce((sum, s) => sum + (s.annual_cost || 0), 0) / 1000).toFixed(0)}K annual spend
               </p>
             </div>
-            <button
-              onClick={runAnalysis}
-              disabled={analyzing || software.length < 2}
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded-lg text-white font-semibold transition-colors flex items-center gap-2"
-            >
-              <RefreshCw className={`w-5 h-5 ${analyzing ? 'animate-spin' : ''}`} />
-              {analysis ? 'Re-analyze Portfolio' : 'Run Redundancy Analysis'}
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={extractFeaturesFromDescriptions}
+                disabled={extractingFeatures || software.length === 0}
+                className="px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 rounded-lg text-white font-medium transition-colors flex items-center gap-2"
+                title="Auto-extract features from software descriptions"
+              >
+                <Tag className={`w-5 h-5 ${extractingFeatures ? 'animate-spin' : ''}`} />
+                {extractingFeatures ? 'Extracting...' : 'Extract Features'}
+              </button>
+              <button
+                onClick={runAnalysis}
+                disabled={analyzing || software.length < 2}
+                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded-lg text-white font-semibold transition-colors flex items-center gap-2"
+              >
+                <RefreshCw className={`w-5 h-5 ${analyzing ? 'animate-spin' : ''}`} />
+                {analysis ? 'Re-analyze Portfolio' : 'Run Redundancy Analysis'}
+              </button>
+            </div>
           </div>
 
           {software.length === 0 ? (
@@ -323,6 +367,13 @@ export default function RedundancyPage() {
                       <p className="text-lg font-bold text-white">{sw.license_count}</p>
                     </div>
                   </div>
+                  <button
+                    onClick={() => setSelectedSoftwareForTagging(sw)}
+                    className="mt-3 w-full py-2 px-3 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+                  >
+                    <Tag className="w-4 h-4" />
+                    Tag Features
+                  </button>
                 </div>
               ))}
             </div>
@@ -516,6 +567,53 @@ export default function RedundancyPage() {
           <p className="text-gray-400 mb-6">
             Click &ldquo;Run Redundancy Analysis&rdquo; above to identify overlapping features and cost savings
           </p>
+        </div>
+      )}
+
+      {/* Feature Tagging Modal */}
+      {selectedSoftwareForTagging && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-700">
+              <div>
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Tag className="w-6 h-6 text-blue-400" />
+                  Tag Features
+                </h2>
+                <p className="text-sm text-gray-400 mt-1">
+                  {selectedSoftwareForTagging.software_name}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedSoftwareForTagging(null)}
+                className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <FeatureTagging
+                softwareId={selectedSoftwareForTagging.id}
+                softwareName={selectedSoftwareForTagging.software_name}
+                onFeaturesUpdated={() => {
+                  // Optionally reload software or refresh analysis
+                }}
+              />
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-gray-700 bg-gray-800/50">
+              <button
+                onClick={() => setSelectedSoftwareForTagging(null)}
+                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Done
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

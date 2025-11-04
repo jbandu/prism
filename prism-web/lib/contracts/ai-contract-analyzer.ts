@@ -1,9 +1,17 @@
 import OpenAI from 'openai';
 import * as pdfParse from 'pdf-parse';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy initialization to avoid build-time errors
+let openai: OpenAI | null = null;
+
+function getOpenAI(): OpenAI {
+  if (!openai) {
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openai;
+}
 
 export interface ContractAnalysisResult {
   // Extracted Key Terms
@@ -87,7 +95,7 @@ export async function analyzeContract(
     // Use GPT-4o-mini for cost-effective analysis
     const prompt = buildContractAnalysisPrompt(contractText, vendorName, contractType);
 
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         {

@@ -97,6 +97,34 @@ export async function analyzePortfolioOverlaps(
 
   console.log(`\n📊 Processing software products...`);
 
+  // Load features for all software
+  const softwareIds = companySoftware.map(s => s.id);
+  const featuresResult = await sql`
+    SELECT
+      software_id,
+      feature_name,
+      feature_category_id,
+      fc.category_name
+    FROM software_features_mapping sfm
+    LEFT JOIN feature_categories fc ON fc.id = sfm.feature_category_id
+    WHERE software_id = ANY(${softwareIds})
+  `;
+
+  // Group features by software_id
+  const featuresBySoftware = new Map<string, any[]>();
+  for (const feature of featuresResult) {
+    if (!featuresBySoftware.has(feature.software_id)) {
+      featuresBySoftware.set(feature.software_id, []);
+    }
+    featuresBySoftware.get(feature.software_id)!.push({
+      feature_name: feature.feature_name,
+      category_name: feature.category_name || 'Uncategorized',
+      description: feature.feature_name
+    });
+  }
+
+  let softwareWithoutFeatures = 0;
+
   for (let idx = 0; idx < companySoftware.length; idx++) {
     const software = companySoftware[idx];
 
@@ -107,13 +135,18 @@ export async function analyzePortfolioOverlaps(
       throw new Error('Analysis cancelled by user');
     }
 
-    // For now, use category as a basic feature until we migrate schema
-    // TODO: Migrate software_features_mapping to reference software_assets instead of software table
-    const categoryFeature = {
-      feature_name: software.category,
-      category_name: software.category,
-      description: `${software.category} functionality`,
-    };
+    // Get actual features from database
+    let features = featuresBySoftware.get(software.id) || [];
+
+    // If no features tagged, fall back to category-based (legacy behavior)
+    if (features.length === 0) {
+      softwareWithoutFeatures++;
+      features = [{
+        feature_name: software.category,
+        category_name: software.category,
+        description: `${software.category} functionality`,
+      }];
+    }
 
     softwareFeatures.set(software.id, {
       id: software.id,
@@ -121,7 +154,7 @@ export async function analyzePortfolioOverlaps(
       vendor_name: software.vendor_name,
       annual_cost: parseFloat(software.annual_cost || 0),
       category: software.category,
-      features: [categoryFeature],
+      features: features,
     });
 
     // Update progress every few items
@@ -134,6 +167,11 @@ export async function analyzePortfolioOverlaps(
         { processedSoftware: idx + 1 }
       );
     }
+  }
+
+  if (softwareWithoutFeatures > 0) {
+    console.log(`  ⚠️  ${softwareWithoutFeatures} software products have no tagged features (using category-based matching)`);
+    console.log(`  💡 Tip: Use "Extract Features" or manually tag features for better accuracy`);
   }
 
   console.log(`  ✅ Processed ${softwareFeatures.size} software products`);
@@ -254,16 +292,19 @@ export async function analyzePortfolioOverlaps(
   console.log(`   🔗 ${comparisonMatrix.length} significant overlaps detected`);
   console.log(`   💡 ${recommendations.length} consolidation opportunities identified\n`);
 
-  // Mark analysis as complete
-  progressTracker?.complete(comparisonMatrix.length, totalRedundancyCost);
-
-  return {
+  // Prepare results object
+  const results = {
     overlaps: categoryOverlaps,
     comparisonMatrix,
     recommendations,
     totalRedundancyCost,
     analysisDate: new Date(),
   };
+
+  // Mark analysis as complete and store results
+  progressTracker?.complete(comparisonMatrix.length, totalRedundancyCost, results);
+
+  return results;
 }
 
 /**
