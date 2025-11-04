@@ -70,21 +70,30 @@ export default function CompaniesPage() {
       const result = await response.json();
 
       if (result.success && result.data) {
+        // Helper function to generate slug from company name
+        const generateSlug = (name: string): string => {
+          return name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+        };
+
         // Transform Company data to Client format
         // Note: Neon returns NUMERIC/DECIMAL as strings, so we need to parse them
-        const transformedClients: Client[] = result.data.map((company: Company) => ({
-          id: company.slug, // Use slug for URL routing
-          company: company.company_name,
-          contact: company.primary_contact_name || "N/A",
-          email: company.primary_contact_email || "N/A",
-          status: (company.contract_status || "active") as "active" | "prospect" | "churned",
-          software: company.total_software_count || 0,
-          annualSpend: parseFloat(company.total_annual_software_spend as any) || 0,
-          savings: parseFloat(company.total_savings_identified as any) || 0,
-          lastActive: "N/A", // TODO: Add last activity tracking
-          industry: company.industry,
-          employees: company.employee_count
-        }));
+        const transformedClients: Client[] = result.data
+          .map((company: Company) => ({
+            id: company.slug || generateSlug(company.company_name), // Use slug or generate from name
+            company: company.company_name,
+            contact: company.primary_contact_name || "N/A",
+            email: company.primary_contact_email || "N/A",
+            status: (company.contract_status || "active") as "active" | "prospect" | "churned",
+            software: company.total_software_count || 0,
+            annualSpend: parseFloat(company.total_annual_software_spend as any) || 0,
+            savings: parseFloat(company.total_savings_identified as any) || 0,
+            lastActive: "N/A", // TODO: Add last activity tracking
+            industry: company.industry,
+            employees: company.employee_count
+          }));
         setClients(transformedClients);
       }
     } catch (error) {
