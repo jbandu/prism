@@ -35,18 +35,23 @@ const FEATURE_PATTERNS = {
 
 // Category-specific features
 const CATEGORY_FEATURES: Record<string, string[]> = {
-  'Collaboration': ['Real-time collaboration', 'Team workspaces', 'File sharing', 'Comments'],
-  'Project Management': ['Task management', 'Gantt charts', 'Sprint planning', 'Time tracking'],
-  'Communication': ['Instant messaging', 'Video conferencing', 'Screen sharing', 'Channels'],
-  'CRM': ['Contact management', 'Sales pipeline', 'Lead tracking', 'Email campaigns'],
-  'Analytics': ['Data visualization', 'Custom reports', 'Dashboards', 'KPI tracking'],
-  'Marketing': ['Email campaigns', 'Social media', 'SEO tools', 'Analytics'],
-  'HR': ['Employee database', 'Time off tracking', 'Payroll', 'Performance reviews'],
-  'Accounting': ['Invoicing', 'Expense tracking', 'Financial reports', 'Tax management'],
-  'Design': ['Vector editing', 'Prototyping', 'Templates', 'Asset library'],
-  'Development': ['Code editor', 'Version control', 'CI/CD', 'Debugging'],
-  'Security': ['Access control', 'Encryption', 'Audit logs', 'Compliance'],
-  'Storage': ['File storage', 'Version control', 'Sharing', 'Backup'],
+  'Collaboration': ['Real-time collaboration', 'Team workspaces', 'File sharing', 'Comments', 'Document editing'],
+  'Project Management': ['Task management', 'Gantt charts', 'Sprint planning', 'Time tracking', 'Resource planning'],
+  'Communication': ['Instant messaging', 'Video conferencing', 'Screen sharing', 'Channels', 'Voice calls'],
+  'CRM': ['Contact management', 'Sales pipeline', 'Lead tracking', 'Email campaigns', 'Opportunity management'],
+  'Analytics': ['Data visualization', 'Custom reports', 'Dashboards', 'KPI tracking', 'Business intelligence'],
+  'Marketing': ['Email campaigns', 'Social media', 'SEO tools', 'Analytics', 'Content management'],
+  'HR': ['Employee database', 'Time off tracking', 'Payroll', 'Performance reviews', 'Recruiting'],
+  'Accounting': ['Invoicing', 'Expense tracking', 'Financial reports', 'Tax management', 'Accounts payable'],
+  'Finance': ['Financial planning', 'Budgeting', 'Treasury management', 'Financial reporting', 'Compliance'],
+  'Design': ['Vector editing', 'Prototyping', 'Templates', 'Asset library', 'Design collaboration'],
+  'Development': ['Code editor', 'Version control', 'CI/CD', 'Debugging', 'Testing'],
+  'IT Management': ['Asset management', 'Help desk', 'Monitoring', 'Automation', 'Configuration management'],
+  'Security': ['Access control', 'Encryption', 'Audit logs', 'Compliance', 'Threat detection'],
+  'Storage': ['File storage', 'Version control', 'Sharing', 'Backup', 'Data archiving'],
+  'Data Management': ['Data integration', 'ETL', 'Data warehousing', 'Data quality', 'Master data management'],
+  'Cloud Infrastructure': ['Cloud hosting', 'Virtual machines', 'Container orchestration', 'Load balancing', 'Auto-scaling'],
+  'Productivity': ['Document creation', 'Spreadsheets', 'Presentations', 'Note-taking', 'Task lists'],
 };
 
 /**

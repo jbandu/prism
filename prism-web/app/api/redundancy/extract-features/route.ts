@@ -38,24 +38,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch software products with descriptions
+    // Fetch software products (note: software table doesn't have description column)
+    // We'll extract features based on software_name, vendor_name, and category
     let softwareQuery;
     if (softwareIds && softwareIds.length > 0) {
       softwareQuery = sql`
-        SELECT id, software_name, vendor_name, category, description
+        SELECT
+          id,
+          software_name,
+          vendor_name,
+          category,
+          COALESCE(software_name || ' ' || vendor_name, software_name) as description
         FROM software
         WHERE company_id = ${companyId}
           AND id = ANY(${softwareIds})
-          AND description IS NOT NULL
-          AND LENGTH(description) > 20
       `;
     } else {
       softwareQuery = sql`
-        SELECT id, software_name, vendor_name, category, description
+        SELECT
+          id,
+          software_name,
+          vendor_name,
+          category,
+          COALESCE(software_name || ' ' || vendor_name, software_name) as description
         FROM software
         WHERE company_id = ${companyId}
-          AND description IS NOT NULL
-          AND LENGTH(description) > 20
       `;
     }
 
@@ -203,9 +210,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get software with description
+    // Get software (create description from name and vendor)
     const software = await sql`
-      SELECT id, software_name, vendor_name, category, description
+      SELECT
+        id,
+        software_name,
+        vendor_name,
+        category,
+        COALESCE(software_name || ' ' || vendor_name, software_name) as description
       FROM software
       WHERE id = ${softwareId} AND company_id = ${companyId}
     `;
@@ -219,18 +231,7 @@ export async function GET(request: NextRequest) {
 
     const sw = software[0];
 
-    if (!sw.description || sw.description.length < 20) {
-      return NextResponse.json({
-        success: true,
-        data: {
-          software_name: sw.software_name,
-          has_description: false,
-          features: []
-        }
-      });
-    }
-
-    // Extract features
+    // Extract features from software name, vendor, and category
     const features = extractFeaturesFromDescription(
       sw.description,
       sw.category,
