@@ -111,14 +111,16 @@ async function seedTestUsers() {
           password_hash,
           full_name,
           role,
-          company_id
+          company_id,
+          is_active
         ) VALUES (
           ${user.id},
           ${user.email},
           ${hashedPassword},
           ${user.full_name},
           ${user.role},
-          ${user.company_id || null}
+          ${user.company_id || null},
+          true
         )
       `;
 
