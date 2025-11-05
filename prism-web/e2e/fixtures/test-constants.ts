@@ -5,35 +5,35 @@
 
 export const TEST_USERS = {
   admin: {
-    id: 'test-admin-001',
+    id: '00000000-0000-0000-0000-000000000001',
     email: 'test-admin@prism.test',
     password: 'TestAdmin123!',
     full_name: 'Test Admin',
     role: 'admin',
   },
   companyManager: {
-    id: 'test-manager-001',
+    id: '00000000-0000-0000-0000-000000000002',
     email: 'test-manager@acmecorp.test',
     password: 'TestManager123!',
     full_name: 'John Manager',
-    role: 'company_manager',
-    company_id: 'test-company-acme',
+    role: 'client',
+    company_id: '00000000-0000-0000-0000-000000000099',
   },
   viewer: {
-    id: 'test-viewer-001',
+    id: '00000000-0000-0000-0000-000000000003',
     email: 'test-viewer@acmecorp.test',
     password: 'TestViewer123!',
     full_name: 'Jane Viewer',
     role: 'viewer',
-    company_id: 'test-company-acme',
+    company_id: '00000000-0000-0000-0000-000000000099',
   },
 };
 
 export const TEST_COMPANIES = [
   {
-    id: 'test-company-acme',
+    id: '00000000-0000-0000-0000-000000000099',
     slug: 'acme-corp',
-    company_name: 'Acme Corporation',
+    company_name: 'Acme Corporation (TEST)',
     industry: 'Technology',
     employee_count: 500,
     primary_contact_name: 'John Manager',
@@ -41,7 +41,7 @@ export const TEST_COMPANIES = [
     contract_status: 'active',
   },
   {
-    id: 'test-company-techstart',
+    id: '00000000-0000-0000-0000-000000000098',
     slug: 'techstart',
     company_name: 'TechStart Inc',
     industry: 'SaaS',
@@ -51,7 +51,7 @@ export const TEST_COMPANIES = [
     contract_status: 'active',
   },
   {
-    id: 'test-company-prospect',
+    id: '00000000-0000-0000-0000-000000000097',
     slug: 'prospect-co',
     company_name: 'Prospect Company',
     industry: 'Finance',
@@ -64,8 +64,8 @@ export const TEST_COMPANIES = [
 
 export const TEST_SOFTWARE = [
   {
-    id: 'test-software-001',
-    company_id: 'test-company-acme',
+    id: '00000000-0000-0000-0000-000000000201',
+    company_id: '00000000-0000-0000-0000-000000000099',
     software_name: 'Salesforce',
     vendor_name: 'Salesforce Inc',
     category: 'CRM',
@@ -75,8 +75,8 @@ export const TEST_SOFTWARE = [
     status: 'Active',
   },
   {
-    id: 'test-software-002',
-    company_id: 'test-company-acme',
+    id: '00000000-0000-0000-0000-000000000202',
+    company_id: '00000000-0000-0000-0000-000000000099',
     software_name: 'Slack',
     vendor_name: 'Slack Technologies',
     category: 'Communication',
@@ -86,8 +86,8 @@ export const TEST_SOFTWARE = [
     status: 'Active',
   },
   {
-    id: 'test-software-003',
-    company_id: 'test-company-acme',
+    id: '00000000-0000-0000-0000-000000000203',
+    company_id: '00000000-0000-0000-0000-000000000099',
     software_name: 'Zoom',
     vendor_name: 'Zoom Video Communications',
     category: 'Video Conferencing',
