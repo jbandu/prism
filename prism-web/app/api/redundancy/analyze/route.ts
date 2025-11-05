@@ -46,7 +46,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { companyId } = await request.json();
+    const { companyId, selectedSoftwareIds } = await request.json();
 
     if (!companyId) {
       return NextResponse.json(
@@ -56,18 +56,30 @@ export async function POST(request: Request) {
     }
 
     console.log(`\n🚀 Starting redundancy analysis for company: ${companyId}`);
+    if (selectedSoftwareIds && selectedSoftwareIds.length > 0) {
+      console.log(`   📋 Analyzing ${selectedSoftwareIds.length} selected software products`);
+    }
 
     // Resolve slug to UUID if needed
     const resolvedCompanyId = await resolveCompanyId(companyId);
 
     // Get software count for progress tracking
-    const softwareCount = await sql`
-      SELECT COUNT(*) as count
-      FROM software_assets
-      WHERE company_id = ${resolvedCompanyId}
-      AND contract_status = 'active'
-    `;
+    const softwareCountQuery = selectedSoftwareIds && selectedSoftwareIds.length > 0
+      ? sql`
+          SELECT COUNT(*) as count
+          FROM software_assets
+          WHERE company_id = ${resolvedCompanyId}
+          AND contract_status = 'active'
+          AND id = ANY(${selectedSoftwareIds})
+        `
+      : sql`
+          SELECT COUNT(*) as count
+          FROM software_assets
+          WHERE company_id = ${resolvedCompanyId}
+          AND contract_status = 'active'
+        `;
 
+    const softwareCount = await softwareCountQuery;
     const totalSoftware = parseInt(softwareCount[0]?.count || '0');
 
     // Check if analysis is already in progress
@@ -85,7 +97,7 @@ export async function POST(request: Request) {
 
     // Run analysis asynchronously in the background
     // Don't await - return immediately so client can start polling
-    analyzePortfolioOverlaps(resolvedCompanyId, tracker)
+    analyzePortfolioOverlaps(resolvedCompanyId, tracker, selectedSoftwareIds)
       .then((results) => {
         console.log(`✅ Analysis completed for ${resolvedCompanyId}`);
         // Progress tracker already marked as complete in analyzePortfolioOverlaps

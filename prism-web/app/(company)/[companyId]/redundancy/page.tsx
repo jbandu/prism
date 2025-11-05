@@ -333,7 +333,7 @@ export default function RedundancyPage() {
         {analysis && !analyzing && (
           <button
             onClick={runAnalysis}
-            disabled={software.length < 2}
+            disabled={selectedSoftwareIds.size < 2}
             className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded-lg text-white font-semibold transition-colors flex items-center gap-2 shadow-lg shadow-blue-900/50"
           >
             <RefreshCw className="w-5 h-5" />
@@ -393,7 +393,7 @@ export default function RedundancyPage() {
               </button>
               <button
                 onClick={runAnalysis}
-                disabled={analyzing || software.length < 2}
+                disabled={analyzing || selectedSoftwareIds.size < 2}
                 className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded-lg text-white font-semibold transition-colors flex items-center gap-2"
               >
                 <RefreshCw className={`w-5 h-5 ${analyzing ? 'animate-spin' : ''}`} />
@@ -401,6 +401,39 @@ export default function RedundancyPage() {
               </button>
             </div>
           </div>
+
+          {/* Selection Controls */}
+          {software.length > 0 && (
+            <div className="mb-6 flex items-center justify-between p-4 bg-gray-900/50 border border-gray-700/50 rounded-lg">
+              <div className="flex items-center gap-4">
+                <div className="text-sm">
+                  <span className="text-white font-semibold">{selectedSoftwareIds.size}</span>
+                  <span className="text-gray-400"> of </span>
+                  <span className="text-white font-semibold">{software.length}</span>
+                  <span className="text-gray-400"> selected for analysis</span>
+                </div>
+                {selectedSoftwareIds.size < 2 && (
+                  <div className="text-xs text-yellow-400 flex items-center gap-1">
+                    ⚠️ Select at least 2 products
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={selectAllSoftware}
+                  className="px-3 py-1.5 text-sm bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 rounded-lg transition-colors"
+                >
+                  Select All
+                </button>
+                <button
+                  onClick={deselectAllSoftware}
+                  className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg transition-colors"
+                >
+                  Deselect All
+                </button>
+              </div>
+            </div>
+          )}
 
           {software.length === 0 ? (
             <div className="text-center py-12">
@@ -410,91 +443,34 @@ export default function RedundancyPage() {
             </div>
           ) : showPortfolio ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {software.map((sw) => (
-                <div
-                  key={sw.id}
-                  className="bg-gray-900/50 rounded-lg p-4 border border-gray-700 hover:border-gray-600 transition-colors"
-                >
-                  <div className="flex items-start gap-3 mb-3">
-                    <LogoImage
-                      name={sw.vendor_name || sw.software_name}
-                      size={48}
-                      className="flex-shrink-0"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-white truncate">{sw.software_name}</h3>
-                      <p className="text-sm text-gray-400 truncate">{sw.vendor_name}</p>
-                    </div>
-                    <span className="px-2 py-1 bg-blue-900/30 text-blue-400 text-xs rounded-full flex-shrink-0">
-                      {sw.category}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between pt-3 border-t border-gray-700">
-                    <div>
-                      <p className="text-xs text-gray-500">Annual Cost</p>
-                      <p className="text-lg font-bold text-white">
-                        ${(sw.annual_cost / 1000).toFixed(0)}K
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-gray-500">Licenses</p>
-                      <p className="text-lg font-bold text-white">{sw.license_count}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setSelectedSoftwareForTagging(sw)}
-                    className="mt-3 w-full py-2 px-3 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors"
-                  >
-                    <Tag className="w-4 h-4" />
-                    Tag Features
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowPortfolio(true)}
-              className="w-full py-4 text-center text-gray-400 hover:text-white hover:bg-gray-900/30 rounded-lg border-2 border-dashed border-gray-700 hover:border-gray-600 transition-colors"
-            >
-              <Package className="w-8 h-8 mx-auto mb-2" />
-              <span className="text-sm font-medium">Click to view {software.length} software products</span>
-            </button>
-          )}
-
-          {software.length > 0 && software.length < 2 && (
-            <div className="mt-4 p-4 bg-yellow-900/20 border border-yellow-800/50 rounded-lg">
-              <p className="text-sm text-yellow-400">
-                ⚠️ Need at least 2 software products to run redundancy analysis
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {analysis && (
-        <>
-          {/* Collapsible Portfolio Section */}
-          <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-            <button
-              onClick={() => setShowPortfolio(!showPortfolio)}
-              className="w-full flex items-center justify-between hover:opacity-80 transition-opacity"
-            >
-              <div className="flex items-center gap-2">
-                <Package className="w-5 h-5 text-gray-400" />
-                <h3 className="text-lg font-semibold text-white">Software Portfolio</h3>
-                <span className="text-sm text-gray-400">({software.length} products)</span>
-              </div>
-              <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showPortfolio ? 'rotate-180' : ''}`} />
-            </button>
-
-            {showPortfolio && (
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {software.map((sw) => (
+              {software.map((sw) => {
+                const isSelected = selectedSoftwareIds.has(sw.id);
+                return (
                   <div
                     key={sw.id}
-                    className="bg-gray-900/50 rounded-lg p-4 border border-gray-700 hover:border-gray-600 transition-colors"
+                    className={`bg-gray-900/50 rounded-lg p-4 border-2 transition-all ${
+                      isSelected
+                        ? 'border-blue-500 shadow-lg shadow-blue-900/30'
+                        : 'border-gray-700 hover:border-gray-600'
+                    }`}
                   >
+                    {/* Checkbox */}
                     <div className="flex items-start gap-3 mb-3">
+                      <button
+                        onClick={() => toggleSoftwareSelection(sw.id)}
+                        className={`flex-shrink-0 w-5 h-5 rounded border-2 transition-all ${
+                          isSelected
+                            ? 'bg-blue-600 border-blue-600'
+                            : 'border-gray-500 hover:border-blue-400'
+                        } flex items-center justify-center`}
+                        title={isSelected ? 'Exclude from analysis' : 'Include in analysis'}
+                      >
+                        {isSelected && (
+                          <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
                       <LogoImage
                         name={sw.vendor_name || sw.software_name}
                         size={48}
@@ -520,8 +496,112 @@ export default function RedundancyPage() {
                         <p className="text-lg font-bold text-white">{sw.license_count}</p>
                       </div>
                     </div>
+                    <button
+                      onClick={() => setSelectedSoftwareForTagging(sw)}
+                      className="mt-3 w-full py-2 px-3 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+                    >
+                      <Tag className="w-4 h-4" />
+                      Tag Features
+                    </button>
                   </div>
-                ))}
+                );
+              })}
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowPortfolio(true)}
+              className="w-full py-4 text-center text-gray-400 hover:text-white hover:bg-gray-900/30 rounded-lg border-2 border-dashed border-gray-700 hover:border-gray-600 transition-colors"
+            >
+              <Package className="w-8 h-8 mx-auto mb-2" />
+              <span className="text-sm font-medium">Click to view {software.length} software products</span>
+            </button>
+          )}
+
+          {software.length > 0 && selectedSoftwareIds.size < 2 && (
+            <div className="mt-4 p-4 bg-yellow-900/20 border border-yellow-800/50 rounded-lg">
+              <p className="text-sm text-yellow-400">
+                ⚠️ Select at least 2 software products to run redundancy analysis
+                {selectedSoftwareIds.size === 1 && ` (${selectedSoftwareIds.size} selected)`}
+                {selectedSoftwareIds.size === 0 && ` (none selected)`}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {analysis && (
+        <>
+          {/* Collapsible Portfolio Section */}
+          <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
+            <button
+              onClick={() => setShowPortfolio(!showPortfolio)}
+              className="w-full flex items-center justify-between hover:opacity-80 transition-opacity"
+            >
+              <div className="flex items-center gap-2">
+                <Package className="w-5 h-5 text-gray-400" />
+                <h3 className="text-lg font-semibold text-white">Software Portfolio</h3>
+                <span className="text-sm text-gray-400">({software.length} products)</span>
+              </div>
+              <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showPortfolio ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showPortfolio && (
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {software.map((sw) => {
+                  const isSelected = selectedSoftwareIds.has(sw.id);
+                  return (
+                    <div
+                      key={sw.id}
+                      className={`bg-gray-900/50 rounded-lg p-4 border-2 transition-all ${
+                        isSelected
+                          ? 'border-blue-500 shadow-lg shadow-blue-900/30'
+                          : 'border-gray-700 hover:border-gray-600'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3 mb-3">
+                        <button
+                          onClick={() => toggleSoftwareSelection(sw.id)}
+                          className={`flex-shrink-0 w-5 h-5 rounded border-2 transition-all ${
+                            isSelected
+                              ? 'bg-blue-600 border-blue-600'
+                              : 'border-gray-500 hover:border-blue-400'
+                          } flex items-center justify-center`}
+                          title={isSelected ? 'Exclude from analysis' : 'Include in analysis'}
+                        >
+                          {isSelected && (
+                            <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </button>
+                        <LogoImage
+                          name={sw.vendor_name || sw.software_name}
+                          size={48}
+                          className="flex-shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-white truncate">{sw.software_name}</h3>
+                          <p className="text-sm text-gray-400 truncate">{sw.vendor_name}</p>
+                        </div>
+                        <span className="px-2 py-1 bg-blue-900/30 text-blue-400 text-xs rounded-full flex-shrink-0">
+                          {sw.category}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between pt-3 border-t border-gray-700">
+                        <div>
+                          <p className="text-xs text-gray-500">Annual Cost</p>
+                          <p className="text-lg font-bold text-white">
+                            ${(sw.annual_cost / 1000).toFixed(0)}K
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-gray-500">Licenses</p>
+                          <p className="text-lg font-bold text-white">{sw.license_count}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

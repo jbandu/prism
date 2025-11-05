@@ -52,28 +52,47 @@ export interface AnalysisResult {
  */
 export async function analyzePortfolioOverlaps(
   companyId: string,
-  progressTracker?: ProgressTracker
+  progressTracker?: ProgressTracker,
+  selectedSoftwareIds?: string[]
 ): Promise<AnalysisResult> {
   console.log(`\n🔍 Starting portfolio overlap analysis for company ${companyId}...\n`);
 
   progressTracker?.updateProgress('Loading Software', 5, 'Loading software portfolio...');
   progressTracker?.addActivity('📦 Querying database for active software products', 'info');
 
-  // Step 1: Get all software for this company
-  const companySoftware = await sql`
-    SELECT
-      id,
-      software_name,
-      vendor_name,
-      total_annual_cost as annual_cost,
-      category
-    FROM software_assets
-    WHERE company_id = ${companyId}
-    AND contract_status = 'active'
-  `;
+  // Step 1: Get all software for this company (optionally filtered by selection)
+  const companySoftware = selectedSoftwareIds && selectedSoftwareIds.length > 0
+    ? await sql`
+        SELECT
+          id,
+          software_name,
+          vendor_name,
+          total_annual_cost as annual_cost,
+          category
+        FROM software_assets
+        WHERE company_id = ${companyId}
+        AND contract_status = 'active'
+        AND id = ANY(${selectedSoftwareIds})
+      `
+    : await sql`
+        SELECT
+          id,
+          software_name,
+          vendor_name,
+          total_annual_cost as annual_cost,
+          category
+        FROM software_assets
+        WHERE company_id = ${companyId}
+        AND contract_status = 'active'
+      `;
 
-  console.log(`📦 Found ${companySoftware.length} active software products`);
-  progressTracker?.addActivity(`✅ Found ${companySoftware.length} active software products`, 'success');
+  if (selectedSoftwareIds && selectedSoftwareIds.length > 0) {
+    console.log(`📦 Found ${companySoftware.length} selected software products (filtered from ${selectedSoftwareIds.length} requested)`);
+    progressTracker?.addActivity(`✅ Analyzing ${companySoftware.length} selected products`, 'success');
+  } else {
+    console.log(`📦 Found ${companySoftware.length} active software products`);
+    progressTracker?.addActivity(`✅ Found ${companySoftware.length} active software products`, 'success');
+  }
 
   if (companySoftware.length < 2) {
     console.log('⚠️  Need at least 2 software products for overlap analysis');
