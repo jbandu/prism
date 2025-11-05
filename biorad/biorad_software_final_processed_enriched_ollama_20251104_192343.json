@@ -1,0 +1,103 @@
+[
+  {
+    "category": "infrastructure",
+    "subcategory": "cloud_services",
+    "features": [
+      "Managed Services",
+      "Cloud Storage",
+      "Compute Power",
+      "Database Management",
+      "Security and Compliance"
+    ],
+    "use_cases": [
+      "Scalable infrastructure for large datasets",
+      "Cost-effective cloud storage solutions",
+      "High-performance computing for data analysis"
+    ],
+    "user_personas": [
+      "IT Administrators",
+      "Data Scientists",
+      "DevOps Engineers"
+    ],
+    "integration_potential": "high",
+    "consolidation_priority": "low",
+    "estimated_users": 100,
+    "cost_optimization_notes": "Optimize usage of cloud services, consider rightsizing and reserved instances to reduce costs.",
+    "original_name": "",
+    "original_vendor": "",
+    "enriched_at": "2025-11-04T19:23:47.815960",
+    "enrichment_source": "ollama_llama3.1:8b",
+    "processing_time_seconds": 4.724404573440552,
+    "original_data": {
+      "software_name": "AWS Cloud Services",
+      "description": "Various AWS cloud services subscribed by Bio-Rad under Enterprise Account agreement."
+    }
+  },
+  {
+    "category": "infrastructure",
+    "subcategory": "cloud_services",
+    "features": [
+      "Unified communication and collaboration",
+      "Phone shared services contract management",
+      "Global licensing capabilities"
+    ],
+    "use_cases": [
+      "Centralized communication and collaboration across global teams",
+      "Streamlined phone service management for large enterprises",
+      "Scalable licensing solutions for growing businesses"
+    ],
+    "user_personas": [
+      "IT Administrators",
+      "Communication and Collaboration Teams",
+      "Global Business Leaders"
+    ],
+    "integration_potential": "high",
+    "consolidation_priority": "medium",
+    "estimated_users": 1000,
+    "cost_optimization_notes": "Potential for cost savings through optimized licensing and contract management",
+    "original_name": "",
+    "original_vendor": "",
+    "enriched_at": "2025-11-04T19:23:52.339378",
+    "enrichment_source": "ollama_llama3.1:8b",
+    "processing_time_seconds": 4.5233893394470215,
+    "original_data": {
+      "software_name": "Microsoft EA and Unified Phone Shared Services",
+      "description": "Enterprise global licenses from Microsoft including unified and phone shared services contracts."
+    }
+  },
+  {
+    "category": "sales_marketing",
+    "subcategory": "CRM",
+    "features": [
+      "Contact Management",
+      "Sales Pipeline Tracking",
+      "Marketing Automation",
+      "Customer Service Ticketing",
+      "Compliance and Legal Management"
+    ],
+    "use_cases": [
+      "Managing Sales Pipelines",
+      "Streamlining Customer Service Operations",
+      "Enhancing Marketing Campaigns",
+      "Ensuring Compliance with Regulations"
+    ],
+    "user_personas": [
+      "Sales Team",
+      "Customer Support Agents",
+      "Marketing Professionals"
+    ],
+    "integration_potential": "high",
+    "consolidation_priority": "medium",
+    "estimated_users": 100,
+    "cost_optimization_notes": "Potential for cost savings through automation and process optimization, but may require significant implementation effort.",
+    "original_name": "",
+    "original_vendor": "",
+    "enriched_at": "2025-11-04T19:23:57.248625",
+    "enrichment_source": "ollama_llama3.1:8b",
+    "processing_time_seconds": 4.909217834472656,
+    "original_data": {
+      "software_name": "SAP CRM",
+      "description": "Customer Relationship Management application for Sales, Service, Marketing, Compliance, Legal, Supply Chain, Product Development, etc."
+    }
+  }
+]
