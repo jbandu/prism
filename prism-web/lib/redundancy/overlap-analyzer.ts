@@ -5,7 +5,7 @@
 
 import { neon } from '@neondatabase/serverless';
 import { extractFeaturesFromSoftware, saveFeaturesToDatabase } from './feature-extractor';
-import { generateConsolidationRecommendations } from './recommendation-engine';
+import { generateConsolidationRecommendations } from './recommendation-engine-ollama'; // ✅ Using LOCAL GPU
 import { ProgressTracker } from './progress-tracker';
 
 const sql = neon(process.env.DATABASE_URL!);

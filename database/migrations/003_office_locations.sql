@@ -5,7 +5,7 @@
 
 CREATE TABLE IF NOT EXISTS office_locations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    company_id UUID REFERENCES companies(company_id) ON DELETE CASCADE,
+    company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
     office_name VARCHAR(255) NOT NULL,
     address TEXT,
     city VARCHAR(100),
@@ -40,7 +40,7 @@ INSERT INTO office_locations (
     latitude, longitude, employee_count, is_headquarters, timezone
 )
 SELECT
-    company_id,
+    id,
     'London Headquarters',
     'London',
     'United Kingdom',
@@ -58,7 +58,7 @@ INSERT INTO office_locations (
     latitude, longitude, employee_count, is_headquarters, timezone
 )
 SELECT
-    company_id,
+    id,
     'Berlin Operations',
     'Berlin',
     'Germany',
@@ -77,7 +77,7 @@ INSERT INTO office_locations (
     latitude, longitude, employee_count, is_headquarters, timezone
 )
 SELECT
-    company_id,
+    id,
     'Global Headquarters',
     'Hercules, CA',
     'United States',
@@ -95,7 +95,7 @@ INSERT INTO office_locations (
     latitude, longitude, employee_count, is_headquarters, timezone
 )
 SELECT
-    company_id,
+    id,
     office_name,
     city,
     country,
@@ -116,7 +116,7 @@ FROM (VALUES
     ('Manufacturing Plant', 'Bangalore', 'India', 12.9716, 77.5946, 950, false, 'Asia/Kolkata')
 ) AS sample(office_name, city, country, latitude, longitude, employee_count, is_headquarters, timezone)
 CROSS JOIN (
-    SELECT company_id FROM companies WHERE company_name LIKE '%BioRad%' OR company_name LIKE '%Bio-Rad%' LIMIT 1
+    SELECT id FROM companies WHERE company_name LIKE '%BioRad%' OR company_name LIKE '%Bio-Rad%' LIMIT 1
 ) AS company
 ON CONFLICT DO NOTHING;
 

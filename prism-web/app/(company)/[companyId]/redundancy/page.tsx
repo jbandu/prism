@@ -39,11 +39,43 @@ export default function RedundancyPage() {
   const [progress, setProgress] = useState<AnalysisProgress | null>(null);
   const [showPortfolio, setShowPortfolio] = useState(true);
   const [selectedSoftwareForTagging, setSelectedSoftwareForTagging] = useState<Software | null>(null);
+  const [selectedSoftwareIds, setSelectedSoftwareIds] = useState<Set<string>>(new Set());
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     loadSoftware();
   }, []);
+
+  // Initialize selection when software loads
+  useEffect(() => {
+    if (software.length > 0 && selectedSoftwareIds.size === 0) {
+      // Try to load from localStorage first
+      const storageKey = `redundancy-selection-${companyId}`;
+      const stored = localStorage.getItem(storageKey);
+
+      if (stored) {
+        try {
+          const storedIds = JSON.parse(stored);
+          const validIds = storedIds.filter((id: string) => software.some(sw => sw.id === id));
+          setSelectedSoftwareIds(new Set(validIds));
+        } catch (e) {
+          // If parsing fails, select all by default
+          setSelectedSoftwareIds(new Set(software.map(s => s.id)));
+        }
+      } else {
+        // Default: select all software
+        setSelectedSoftwareIds(new Set(software.map(s => s.id)));
+      }
+    }
+  }, [software, companyId]);
+
+  // Save selection to localStorage whenever it changes
+  useEffect(() => {
+    if (selectedSoftwareIds.size > 0 && software.length > 0) {
+      const storageKey = `redundancy-selection-${companyId}`;
+      localStorage.setItem(storageKey, JSON.stringify(Array.from(selectedSoftwareIds)));
+    }
+  }, [selectedSoftwareIds, companyId, software.length]);
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -132,6 +164,26 @@ export default function RedundancyPage() {
     }
   };
 
+  const toggleSoftwareSelection = (softwareId: string) => {
+    setSelectedSoftwareIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(softwareId)) {
+        newSet.delete(softwareId);
+      } else {
+        newSet.add(softwareId);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllSoftware = () => {
+    setSelectedSoftwareIds(new Set(software.map(s => s.id)));
+  };
+
+  const deselectAllSoftware = () => {
+    setSelectedSoftwareIds(new Set());
+  };
+
   const runAnalysis = async () => {
     try {
       setAnalyzing(true);
@@ -139,10 +191,16 @@ export default function RedundancyPage() {
       setAnalysis(null);
       setShowPortfolio(false); // Hide portfolio grid during analysis
 
+      // Get selected software IDs to send to API
+      const selectedIds = Array.from(selectedSoftwareIds);
+
       const res = await fetch('/api/redundancy/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ companyId }),
+        body: JSON.stringify({
+          companyId,
+          selectedSoftwareIds: selectedIds.length > 0 ? selectedIds : undefined
+        }),
       });
 
       const result = await res.json();
@@ -248,19 +306,35 @@ export default function RedundancyPage() {
 
   return (
     <div className="space-y-8 p-8">
-      {/* Header */}
+      {/* Header with LLM Indicator */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Redundancy Analysis</h1>
-          <p className="text-gray-400 mt-2">
-            Identify overlapping features and consolidation opportunities
+        <div className="flex-1">
+          <div className="flex items-center gap-4 mb-2">
+            <h1 className="text-3xl font-bold text-white">Redundancy Analysis</h1>
+            {/* LLM Provider Badge */}
+            <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-900/30 to-emerald-900/30 border border-green-700/50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <div className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                </div>
+                <span className="text-sm font-semibold text-green-400">LOCAL GPU</span>
+              </div>
+              <div className="h-4 w-px bg-green-700/50"></div>
+              <span className="text-xs text-green-300">Ollama llama3.1:8b</span>
+              <div className="h-4 w-px bg-green-700/50"></div>
+              <span className="text-xs font-bold text-green-400">$0.00</span>
+            </div>
+          </div>
+          <p className="text-gray-400">
+            Identify overlapping features and consolidation opportunities • Powered by your local GPU
           </p>
         </div>
         {analysis && !analyzing && (
           <button
             onClick={runAnalysis}
             disabled={software.length < 2}
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded-lg text-white font-semibold transition-colors flex items-center gap-2"
+            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded-lg text-white font-semibold transition-colors flex items-center gap-2 shadow-lg shadow-blue-900/50"
           >
             <RefreshCw className="w-5 h-5" />
             Re-analyze Portfolio
@@ -452,52 +526,58 @@ export default function RedundancyPage() {
             )}
           </div>
 
-          {/* Key Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Total Redundancy Cost */}
-            <div className="bg-gradient-to-br from-red-900/20 to-red-950/20 border border-red-800/50 rounded-xl p-6">
-              <div className="flex items-center justify-between mb-2">
-                <DollarSign className="w-8 h-8 text-red-400" />
-                <div className="text-xs text-red-400 font-semibold">WASTED</div>
+          {/* Key Metrics - Improved Visibility */}
+          <div className="bg-gray-900/50 border border-gray-700/50 rounded-2xl p-6 shadow-2xl">
+            <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+              <Target className="w-6 h-6 text-blue-400" />
+              Analysis Results
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Total Redundancy Cost */}
+              <div className="bg-gradient-to-br from-red-900/30 to-red-950/30 border-2 border-red-800/70 rounded-xl p-6 shadow-lg hover:shadow-red-900/50 transition-shadow">
+                <div className="flex items-center justify-between mb-3">
+                  <DollarSign className="w-10 h-10 text-red-400" />
+                  <div className="text-xs text-red-400 font-bold tracking-wider">WASTED</div>
+                </div>
+                <div className="text-4xl font-bold text-white mb-1">
+                  ${(analysis.totalRedundancyCost / 1000).toFixed(0)}K
+                </div>
+                <div className="text-sm text-red-200/80 font-medium">Spent on duplicate features</div>
               </div>
-              <div className="text-3xl font-bold text-white">
-                ${(analysis.totalRedundancyCost / 1000).toFixed(0)}K
-              </div>
-              <div className="text-sm text-gray-400 mt-1">Spent on duplicate features</div>
-            </div>
 
-            {/* Overlapping Features */}
-            <div className="bg-gradient-to-br from-yellow-900/20 to-yellow-950/20 border border-yellow-800/50 rounded-xl p-6">
-              <div className="flex items-center justify-between mb-2">
-                <Layers className="w-8 h-8 text-yellow-400" />
-                <div className="text-xs text-yellow-400 font-semibold">OVERLAPS</div>
+              {/* Overlapping Features */}
+              <div className="bg-gradient-to-br from-yellow-900/30 to-yellow-950/30 border-2 border-yellow-800/70 rounded-xl p-6 shadow-lg hover:shadow-yellow-900/50 transition-shadow">
+                <div className="flex items-center justify-between mb-3">
+                  <Layers className="w-10 h-10 text-yellow-400" />
+                  <div className="text-xs text-yellow-400 font-bold tracking-wider">OVERLAPS</div>
+                </div>
+                <div className="text-4xl font-bold text-white mb-1">{analysis.overlaps.length}</div>
+                <div className="text-sm text-yellow-200/80 font-medium">Feature categories with overlap</div>
               </div>
-              <div className="text-3xl font-bold text-white">{analysis.overlaps.length}</div>
-              <div className="text-sm text-gray-400 mt-1">Feature categories with overlap</div>
-            </div>
 
-            {/* Consolidation Opportunities */}
-            <div className="bg-gradient-to-br from-green-900/20 to-green-950/20 border border-green-800/50 rounded-xl p-6">
-              <div className="flex items-center justify-between mb-2">
-                <Target className="w-8 h-8 text-green-400" />
-                <div className="text-xs text-green-400 font-semibold">OPPORTUNITIES</div>
+              {/* Consolidation Opportunities */}
+              <div className="bg-gradient-to-br from-green-900/30 to-green-950/30 border-2 border-green-800/70 rounded-xl p-6 shadow-lg hover:shadow-green-900/50 transition-shadow">
+                <div className="flex items-center justify-between mb-3">
+                  <Target className="w-10 h-10 text-green-400" />
+                  <div className="text-xs text-green-400 font-bold tracking-wider">OPPORTUNITIES</div>
+                </div>
+                <div className="text-4xl font-bold text-white mb-1">
+                  {analysis.recommendations.length}
+                </div>
+                <div className="text-sm text-green-200/80 font-medium">AI-identified quick wins</div>
               </div>
-              <div className="text-3xl font-bold text-white">
-                {analysis.recommendations.length}
-              </div>
-              <div className="text-sm text-gray-400 mt-1">AI-identified quick wins</div>
-            </div>
 
-            {/* Potential Savings */}
-            <div className="bg-gradient-to-br from-blue-900/20 to-blue-950/20 border border-blue-800/50 rounded-xl p-6">
-              <div className="flex items-center justify-between mb-2">
-                <TrendingDown className="w-8 h-8 text-blue-400" />
-                <div className="text-xs text-blue-400 font-semibold">POTENTIAL</div>
+              {/* Potential Savings */}
+              <div className="bg-gradient-to-br from-blue-900/30 to-blue-950/30 border-2 border-blue-800/70 rounded-xl p-6 shadow-lg hover:shadow-blue-900/50 transition-shadow">
+                <div className="flex items-center justify-between mb-3">
+                  <TrendingDown className="w-10 h-10 text-blue-400" />
+                  <div className="text-xs text-blue-400 font-bold tracking-wider">POTENTIAL</div>
+                </div>
+                <div className="text-4xl font-bold text-white mb-1">
+                  ${(calculatePotentialSavings() / 1000).toFixed(0)}K
+                </div>
+                <div className="text-sm text-blue-200/80 font-medium">From consolidation</div>
               </div>
-              <div className="text-3xl font-bold text-white">
-                ${(calculatePotentialSavings() / 1000).toFixed(0)}K
-              </div>
-              <div className="text-sm text-gray-400 mt-1">From consolidation</div>
             </div>
           </div>
 
