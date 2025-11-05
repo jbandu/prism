@@ -14,6 +14,9 @@ export default defineConfig({
   /* Run tests in files in parallel */
   fullyParallel: true,
 
+  /* Folder for test artifacts such as screenshots, videos, traces, etc. */
+  outputDir: 'test-results/',
+
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
 
@@ -54,9 +57,17 @@ export default defineConfig({
 
   /* Configure projects for major browsers */
   projects: [
+    // Setup project - runs first to authenticate
+    {
+      name: 'setup',
+      testMatch: /.*\.setup\.ts/,
+    },
+
+    // Main test project
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      dependencies: ['setup'], // Run after setup completes
     },
 
     // Temporarily disable other browsers for faster CI runs
@@ -64,18 +75,22 @@ export default defineConfig({
     // {
     //   name: 'firefox',
     //   use: { ...devices['Desktop Firefox'] },
+    //   dependencies: ['setup'],
     // },
     // {
     //   name: 'webkit',
     //   use: { ...devices['Desktop Safari'] },
+    //   dependencies: ['setup'],
     // },
     // {
     //   name: 'Mobile Chrome',
     //   use: { ...devices['Pixel 5'] },
+    //   dependencies: ['setup'],
     // },
     // {
     //   name: 'Mobile Safari',
     //   use: { ...devices['iPhone 12'] },
+    //   dependencies: ['setup'],
     // },
   ],
 
