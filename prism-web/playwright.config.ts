@@ -53,6 +53,13 @@ export default defineConfig({
     contextOptions: {
       recordVideo: process.env.CI ? { dir: 'test-results/videos' } : undefined,
     },
+
+    /* Add Vercel bypass token for deployment protection */
+    extraHTTPHeaders: process.env.VERCEL_AUTOMATION_BYPASS_SECRET
+      ? {
+          'x-vercel-protection-bypass': process.env.VERCEL_AUTOMATION_BYPASS_SECRET,
+        }
+      : {},
   },
 
   /* Configure projects for major browsers */
