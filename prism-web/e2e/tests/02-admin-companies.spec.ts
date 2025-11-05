@@ -3,7 +3,7 @@
  * Tests admin view of companies and navigation to dashboards
  */
 import { test, expect } from '@playwright/test';
-import { TEST_COMPANIES } from '../fixtures/seed-test-data';
+import { TEST_COMPANIES } from '../fixtures/test-constants';
 import path from 'path';
 
 // Use admin authentication

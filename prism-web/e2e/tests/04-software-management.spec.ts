@@ -3,7 +3,7 @@
  * Tests software portfolio views and management
  */
 import { test, expect } from '@playwright/test';
-import { TEST_SOFTWARE } from '../fixtures/seed-test-data';
+import { TEST_SOFTWARE } from '../fixtures/test-constants';
 import path from 'path';
 
 // Use company manager authentication

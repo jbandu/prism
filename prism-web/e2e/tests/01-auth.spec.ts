@@ -3,7 +3,7 @@
  * Tests login, logout, and role-based access
  */
 import { test, expect } from '@playwright/test';
-import { TEST_USERS } from '../fixtures/seed-test-data';
+import { TEST_USERS } from '../fixtures/test-constants';
 
 test.describe('Authentication', () => {
   test.beforeEach(async ({ page }) => {

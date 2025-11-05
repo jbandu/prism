@@ -16,6 +16,8 @@ jobs:
     timeout-minutes: 20
     # Only run when Vercel deployment succeeds
     if: github.event.deployment_status.state == 'success' && github.event.deployment_status.environment == 'Production'
+    permissions:
+      contents: write # Allow posting commit comments
 
     steps:
       - name: Checkout code

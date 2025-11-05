@@ -1,113 +1,30 @@
 /**
  * Test Data Seeding Script for E2E Tests
  * Seeds database with test users, companies, and software data
+ *
+ * NOTE: Only import from this file when running seed/cleanup scripts.
+ * For test constants, import from './test-constants' to avoid requiring DATABASE_URL.
  */
 import { neon } from '@neondatabase/serverless';
 import bcrypt from 'bcryptjs';
+import { TEST_USERS, TEST_COMPANIES, TEST_SOFTWARE } from './test-constants';
 
-const DATABASE_URL = process.env.DATABASE_URL;
+// Re-export constants for backward compatibility
+export { TEST_USERS, TEST_COMPANIES, TEST_SOFTWARE };
 
-if (!DATABASE_URL) {
-  throw new Error('DATABASE_URL environment variable is not set');
+// Lazy initialization of database connection
+let sql: ReturnType<typeof neon> | null = null;
+
+function getDbConnection() {
+  if (!sql) {
+    const DATABASE_URL = process.env.DATABASE_URL;
+    if (!DATABASE_URL) {
+      throw new Error('DATABASE_URL environment variable is not set');
+    }
+    sql = neon(DATABASE_URL);
+  }
+  return sql;
 }
-
-const sql = neon(DATABASE_URL);
-
-// Test data constants
-export const TEST_USERS = {
-  admin: {
-    id: 'test-admin-001',
-    email: 'test-admin@prism.test',
-    password: 'TestAdmin123!',
-    full_name: 'Test Admin',
-    role: 'admin',
-  },
-  companyManager: {
-    id: 'test-manager-001',
-    email: 'test-manager@acmecorp.test',
-    password: 'TestManager123!',
-    full_name: 'John Manager',
-    role: 'company_manager',
-    company_id: 'test-company-acme',
-  },
-  viewer: {
-    id: 'test-viewer-001',
-    email: 'test-viewer@acmecorp.test',
-    password: 'TestViewer123!',
-    full_name: 'Jane Viewer',
-    role: 'viewer',
-    company_id: 'test-company-acme',
-  },
-};
-
-export const TEST_COMPANIES = [
-  {
-    id: 'test-company-acme',
-    slug: 'acme-corp',
-    company_name: 'Acme Corporation',
-    industry: 'Technology',
-    employee_count: 500,
-    primary_contact_name: 'John Manager',
-    primary_contact_email: 'test-manager@acmecorp.test',
-    contract_status: 'active',
-  },
-  {
-    id: 'test-company-techstart',
-    slug: 'techstart',
-    company_name: 'TechStart Inc',
-    industry: 'SaaS',
-    employee_count: 150,
-    primary_contact_name: 'Sarah Johnson',
-    primary_contact_email: 'sarah@techstart.test',
-    contract_status: 'active',
-  },
-  {
-    id: 'test-company-prospect',
-    slug: 'prospect-co',
-    company_name: 'Prospect Company',
-    industry: 'Finance',
-    employee_count: 1000,
-    primary_contact_name: 'Bob Smith',
-    primary_contact_email: 'bob@prospect.test',
-    contract_status: 'prospect',
-  },
-];
-
-export const TEST_SOFTWARE = [
-  {
-    id: 'test-software-001',
-    company_id: 'test-company-acme',
-    software_name: 'Salesforce',
-    vendor_name: 'Salesforce Inc',
-    category: 'CRM',
-    annual_cost: 120000,
-    license_count: 100,
-    active_users: 75,
-    status: 'Active',
-  },
-  {
-    id: 'test-software-002',
-    company_id: 'test-company-acme',
-    software_name: 'Slack',
-    vendor_name: 'Slack Technologies',
-    category: 'Communication',
-    annual_cost: 24000,
-    license_count: 200,
-    active_users: 180,
-    status: 'Active',
-  },
-  {
-    id: 'test-software-003',
-    company_id: 'test-company-acme',
-    software_name: 'Zoom',
-    vendor_name: 'Zoom Video Communications',
-    category: 'Video Conferencing',
-    annual_cost: 18000,
-    license_count: 150,
-    active_users: 60,
-    status: 'Active',
-  },
-];
 
 /**
  * Clean up existing test data
@@ -116,12 +33,13 @@ export async function cleanupTestData() {
   console.log('🧹 Cleaning up existing test data...');
 
   try {
+    const db = getDbConnection();
     // Delete in order of foreign key dependencies
-    await sql`DELETE FROM usage_analytics WHERE software_id LIKE 'test-%'`;
-    await sql`DELETE FROM alternatives WHERE software_id LIKE 'test-%'`;
-    await sql`DELETE FROM software WHERE id LIKE 'test-%' OR company_id LIKE 'test-%'`;
-    await sql`DELETE FROM users WHERE id LIKE 'test-%'`;
-    await sql`DELETE FROM companies WHERE id LIKE 'test-%'`;
+    await db`DELETE FROM usage_analytics WHERE software_id LIKE 'test-%'`;
+    await db`DELETE FROM alternatives WHERE software_id LIKE 'test-%'`;
+    await db`DELETE FROM software WHERE id LIKE 'test-%' OR company_id LIKE 'test-%'`;
+    await db`DELETE FROM users WHERE id LIKE 'test-%'`;
+    await db`DELETE FROM companies WHERE id LIKE 'test-%'`;
 
     console.log('✅ Cleanup completed');
   } catch (error) {
@@ -135,9 +53,10 @@ export async function cleanupTestData() {
  */
 async function seedCompanies() {
   console.log('🏢 Seeding test companies...');
+  const db = getDbConnection();
 
   for (const company of TEST_COMPANIES) {
-    await sql`
+    await db`
       INSERT INTO companies (
         id, slug, company_name, industry, employee_count,
         primary_contact_name, primary_contact_email, contract_status,
@@ -168,12 +87,13 @@ async function seedCompanies() {
  */
 async function seedUsers() {
   console.log('👥 Seeding test users...');
+  const db = getDbConnection();
 
   for (const [key, user] of Object.entries(TEST_USERS)) {
     const passwordHash = await bcrypt.hash(user.password, 10);
     const companyId = 'company_id' in user ? user.company_id : null;
 
-    await sql`
+    await db`
       INSERT INTO users (
         id, email, password_hash, full_name, role,
         company_id, is_active, created_at, updated_at
@@ -202,9 +122,10 @@ async function seedUsers() {
  */
 async function seedSoftware() {
   console.log('💻 Seeding test software...');
+  const db = getDbConnection();
 
   for (const software of TEST_SOFTWARE) {
-    await sql`
+    await db`
       INSERT INTO software (
         id, company_id, software_name, vendor_name, category,
         annual_cost, license_count, status,
@@ -230,7 +151,7 @@ async function seedSoftware() {
     `;
 
     // Add usage analytics
-    await sql`
+    await db`
       INSERT INTO usage_analytics (
         id, software_id, reporting_period,
         active_users, total_licenses, utilization_percentage,
@@ -286,10 +207,24 @@ export async function seedTestData() {
 
 // Run seeding if called directly
 if (require.main === module) {
-  seedTestData()
-    .then(() => process.exit(0))
-    .catch((error) => {
-      console.error(error);
-      process.exit(1);
-    });
+  const command = process.argv[2];
+
+  if (command === 'cleanup') {
+    cleanupTestData()
+      .then(() => {
+        console.log('\n✅ Cleanup complete!\n');
+        process.exit(0);
+      })
+      .catch((error) => {
+        console.error(error);
+        process.exit(1);
+      });
+  } else {
+    seedTestData()
+      .then(() => process.exit(0))
+      .catch((error) => {
+        console.error(error);
+        process.exit(1);
+      });
+  }
 }
