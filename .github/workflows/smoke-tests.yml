@@ -1,0 +1,69 @@
+name: Smoke Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'prism-web/**'
+      - '.github/workflows/smoke-tests.yml'
+  workflow_dispatch:
+
+jobs:
+  smoke-test:
+    name: Run Smoke Tests on Production
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: prism-web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: prism-web
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: prism-web
+        run: npx playwright install --with-deps chromium
+
+      - name: Run smoke tests against production
+        working-directory: prism-web
+        env:
+          PLAYWRIGHT_TEST_BASE_URL: https://prism-eta-eight.vercel.app
+          CI: true
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: npm run test:smoke
+
+      - name: Upload smoke test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-results
+          path: |
+            prism-web/playwright-report/
+            prism-web/test-results/
+          retention-days: 7
+
+      - name: Comment on commit if smoke tests fail
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+              body: `## 🚨 Smoke Tests Failed
+
+**Commit:** ${context.sha.substring(0, 7)}
+**Critical issues detected** - deployment may have broken core functionality.
+
+Check the [workflow run](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) for details.`
+            });
