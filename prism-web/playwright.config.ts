@@ -25,9 +25,11 @@ export default defineConfig({
 
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
-    ['html'],
+    ['html', { open: 'never', outputFolder: 'playwright-report' }],
     ['junit', { outputFile: 'test-results/junit.xml' }],
-    ['list']
+    ['json', { outputFile: 'test-results/results.json' }],
+    ['github'], // GitHub Actions annotations
+    ['list', { printSteps: true }]
   ],
 
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
@@ -43,6 +45,11 @@ export default defineConfig({
 
     /* Video on failure */
     video: 'retain-on-failure',
+
+    /* Capture page context for better debugging */
+    contextOptions: {
+      recordVideo: process.env.CI ? { dir: 'test-results/videos' } : undefined,
+    },
   },
 
   /* Configure projects for major browsers */

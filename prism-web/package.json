@@ -17,6 +17,7 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
     "test:report": "playwright show-report",
+    "test:report:enhanced": "tsx scripts/generate-test-report.ts",
     "seed:software-catalog": "tsx scripts/seed-software-catalog.ts",
     "schema:export": "tsx scripts/export-schema.ts"
   },
