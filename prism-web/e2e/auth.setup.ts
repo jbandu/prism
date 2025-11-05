@@ -41,7 +41,7 @@ setup('authenticate as admin', async ({ page }) => {
   await page.waitForURL(/\/admin\/dashboard/, { timeout: 15000 });
 
   // Verify we're authenticated
-  await expect(page.locator('h1, h2')).toContainText(/dashboard/i, { timeout: 5000 });
+  await expect(page.locator('h1, h2')).toContainText(/PRISM Platform Overview/i, { timeout: 5000 });
 
   // Save authentication state
   await page.context().storageState({ path: adminFile });
@@ -68,7 +68,7 @@ setup('authenticate as company manager', async ({ page }) => {
   await page.waitForURL(/\/.*\/dashboard/, { timeout: 15000 });
 
   // Verify we're authenticated
-  await expect(page.locator('h1, h2')).toContainText(/dashboard/i, { timeout: 5000 });
+  await expect(page.locator('h1, h2')).toContainText(/PRISM Platform Overview/i, { timeout: 5000 });
 
   // Save authentication state
   await page.context().storageState({ path: managerFile });
@@ -95,7 +95,7 @@ setup('authenticate as viewer', async ({ page }) => {
   await page.waitForURL(/\/.*\/dashboard/, { timeout: 15000 });
 
   // Verify we're authenticated
-  await expect(page.locator('h1, h2')).toContainText(/dashboard/i, { timeout: 5000 });
+  await expect(page.locator('h1, h2')).toContainText(/PRISM Platform Overview/i, { timeout: 5000 });
 
   // Save authentication state
   await page.context().storageState({ path: viewerFile });
