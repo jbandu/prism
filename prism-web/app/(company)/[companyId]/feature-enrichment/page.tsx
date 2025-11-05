@@ -214,7 +214,7 @@ export default function FeatureEnrichmentPage() {
               icon: 'database',
               content: (
                 <div className="space-y-2">
-                  <p className="text-sm text-gray-400 mb-2">When you click "Enrich Features", we run:</p>
+                  <p className="text-sm text-gray-400 mb-2">When you click &quot;Enrich Features&quot;, we run:</p>
                   <CodeBlock code={`-- 1. Get all active software for this company
 SELECT id, software_name, vendor_name, category
 FROM software_assets
@@ -242,7 +242,7 @@ ON CONFLICT (software_id, feature_name) DO NOTHING`} />
               icon: 'cpu',
               content: (
                 <div className="space-y-2">
-                  <p className="text-sm text-gray-400 mb-2">When software isn't in our known database, we send this prompt to Ollama:</p>
+                  <p className="text-sm text-gray-400 mb-2">When software isn&apos;t in our known database, we send this prompt to Ollama:</p>
                   <CodeBlock language="text" code={`You are a SaaS software expert. Extract a comprehensive list of features for this software product.
 
 Software: Microsoft Teams by Microsoft

@@ -420,7 +420,7 @@ export default function RedundancyPage() {
                 icon: 'database',
                 content: (
                   <div className="space-y-2">
-                    <p className="text-sm text-gray-400 mb-2">When you click \"Run Redundancy Analysis\", we execute:</p>
+                    <p className="text-sm text-gray-400 mb-2">When you click &quot;Run Redundancy Analysis&quot;, we execute:</p>
                     <CodeBlock code={`-- 1. Get all active software for the company
 SELECT id, software_name, vendor_name,
        total_annual_cost as annual_cost, category
