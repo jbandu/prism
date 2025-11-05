@@ -462,16 +462,19 @@ async function getEnrichedFeatures(
   }
 
   // Method 3: Fallback to category-based features
-  if (category && SAAS_FEATURE_TAXONOMY[category.toLowerCase().replace(/\s+/g, '')]) {
-    const categoryFeatures = SAAS_FEATURE_TAXONOMY[category.toLowerCase().replace(/\s+/g, '')];
-    console.log(`  📦 Using category features for ${softwareName} (${category})`);
-    return {
-      software_id: '',
-      software_name: softwareName,
-      features: categoryFeatures.slice(0, 10), // Limit to 10
-      confidence: 0.5,
-      method: 'category',
-    };
+  if (category) {
+    const categoryKey = category.toLowerCase().replace(/\s+/g, '') as keyof typeof SAAS_FEATURE_TAXONOMY;
+    if (SAAS_FEATURE_TAXONOMY[categoryKey]) {
+      const categoryFeatures = SAAS_FEATURE_TAXONOMY[categoryKey];
+      console.log(`  📦 Using category features for ${softwareName} (${category})`);
+      return {
+        software_id: '',
+        software_name: softwareName,
+        features: categoryFeatures.slice(0, 10), // Limit to 10
+        confidence: 0.5,
+        method: 'category',
+      };
+    }
   }
 
   // Method 4: Generic features
