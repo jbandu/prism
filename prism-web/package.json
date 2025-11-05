@@ -17,7 +17,8 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
     "test:report": "playwright show-report",
-    "seed:software-catalog": "tsx scripts/seed-software-catalog.ts"
+    "seed:software-catalog": "tsx scripts/seed-software-catalog.ts",
+    "schema:export": "tsx scripts/export-schema.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",
