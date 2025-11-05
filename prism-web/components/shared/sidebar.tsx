@@ -16,7 +16,8 @@ import {
   Layers,
   Brain,
   Globe,
-  TrendingDown
+  TrendingDown,
+  Sparkles
 } from "lucide-react";
 
 interface SidebarProps {
@@ -82,6 +83,11 @@ const companyLinks = (companyId: string) => [
     href: `/${companyId}/redundancy`,
     label: "Redundancy Analysis",
     icon: TrendingDown,
+  },
+  {
+    href: `/${companyId}/feature-enrichment`,
+    label: "Feature Enrichment",
+    icon: Sparkles,
   },
   {
     href: `/${companyId}/renewals`,

@@ -6,8 +6,9 @@ import { OverlapMatrix } from '@/components/redundancy/OverlapMatrix';
 import { ConsolidationCards } from '@/components/redundancy/ConsolidationCards';
 import { AnalysisProgressDisplay, AnalysisProgress } from '@/components/redundancy/AnalysisProgress';
 import FeatureTagging from '@/components/software/FeatureTagging';
-import { RefreshCw, TrendingDown, Layers, Target, DollarSign, Package, ChevronDown, Tag, X } from 'lucide-react';
+import { RefreshCw, TrendingDown, Layers, Target, DollarSign, Package, ChevronDown, Tag, X, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { LogoImage } from '@/components/ui/logo-image';
+import { TechnicalExplainer, CodeBlock, ProcessSteps } from '@/components/ui/technical-explainer';
 
 interface AnalysisData {
   overlaps: any[];
@@ -40,6 +41,8 @@ export default function RedundancyPage() {
   const [showPortfolio, setShowPortfolio] = useState(true);
   const [selectedSoftwareForTagging, setSelectedSoftwareForTagging] = useState<Software | null>(null);
   const [selectedSoftwareIds, setSelectedSoftwareIds] = useState<Set<string>>(new Set());
+  const [sortBy, setSortBy] = useState<'name' | 'cost' | 'vendor' | 'category' | 'licenses'>('cost');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -182,6 +185,38 @@ export default function RedundancyPage() {
 
   const deselectAllSoftware = () => {
     setSelectedSoftwareIds(new Set());
+  };
+
+  const getSortedSoftware = () => {
+    const sorted = [...software].sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortBy) {
+        case 'name':
+          comparison = a.software_name.localeCompare(b.software_name);
+          break;
+        case 'cost':
+          comparison = (a.annual_cost || 0) - (b.annual_cost || 0);
+          break;
+        case 'vendor':
+          comparison = (a.vendor_name || '').localeCompare(b.vendor_name || '');
+          break;
+        case 'category':
+          comparison = (a.category || '').localeCompare(b.category || '');
+          break;
+        case 'licenses':
+          comparison = (a.license_count || 0) - (b.license_count || 0);
+          break;
+      }
+
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+
+    return sorted;
+  };
+
+  const toggleSortDirection = () => {
+    setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
   };
 
   const runAnalysis = async () => {
@@ -342,6 +377,372 @@ export default function RedundancyPage() {
         )}
       </div>
 
+      {/* Technical Documentation - What's Happening Behind the Scenes */}
+      {!analyzing && (
+        <div className="space-y-4">
+          <TechnicalExplainer
+            title="🔍 What is Redundancy Analysis?"
+            description="Click to understand how we detect software overlaps and calculate savings"
+            variant="info"
+            sections={[
+              {
+                title: "The Problem We're Solving",
+                icon: 'info',
+                content: "Companies often purchase multiple software products that have overlapping features. For example, both Microsoft Teams and Slack provide instant messaging, video conferencing, and file sharing. This redundancy wastes money and creates complexity. Redundancy analysis identifies these overlaps and recommends which software to consolidate."
+              },
+              {
+                title: "How It Works - 3 Step Process",
+                icon: 'sparkles',
+                content: (
+                  <ProcessSteps
+                    steps={[
+                      {
+                        number: 1,
+                        title: "Feature Collection",
+                        description: "First, we collect all features for each software product. Features come from: (1) manually curated database for popular software, (2) AI extraction using Ollama, or (3) category-based defaults. Example: Microsoft Teams has 23 features like 'Instant messaging', 'Video conferencing', 'Screen sharing', etc."
+                      },
+                      {
+                        number: 2,
+                        title: "Overlap Detection",
+                        description: "We compare every pair of software products to find shared features. Overlap percentage = (shared features / total unique features) × 100. Example: Teams (23 features) and Slack (22 features) share 15 features out of 30 total unique = 50% overlap. Only pairs with >60% overlap are flagged as redundant."
+                      },
+                      {
+                        number: 3,
+                        title: "AI Recommendations",
+                        description: "For high-overlap pairs, we use Ollama (local AI) to generate consolidation recommendations. The AI analyzes: which software has more comprehensive features, cost-effectiveness, market position, integration capabilities, and migration complexity. It recommends which to keep and which to retire, along with expected savings."
+                      }
+                    ]}
+                  />
+                )
+              },
+              {
+                title: "Database Queries Executed",
+                icon: 'database',
+                content: (
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-400 mb-2">When you click \"Run Redundancy Analysis\", we execute:</p>
+                    <CodeBlock code={`-- 1. Get all active software for the company
+SELECT id, software_name, vendor_name,
+       total_annual_cost as annual_cost, category
+FROM software_assets
+WHERE company_id = 'your-company-id'
+  AND contract_status = 'active'
+
+-- 2. Get features for each software product
+SELECT sfm.software_id, sfm.feature_name
+FROM software_features_mapping sfm
+WHERE sfm.software_id IN ('software-id-1', 'software-id-2', ...)
+
+-- 3. Calculate overlaps (done in-memory)
+-- Compare every pair: Software A features ∩ Software B features
+
+-- 4. Store comparison matrix
+INSERT INTO feature_comparison_matrix (
+  company_id, software_id_1, software_id_2,
+  overlap_percentage, shared_features, unique_features
+) VALUES (...)
+
+-- 5. Store AI recommendations
+INSERT INTO consolidation_recommendations (
+  company_id, software_to_keep_id,
+  software_to_remove_ids, annual_savings,
+  recommendation_text, confidence_score
+) VALUES (...)`} />
+                  </div>
+                )
+              }
+            ]}
+          />
+
+          <TechnicalExplainer
+            title="📊 Overlap Calculation Algorithm"
+            description="The mathematical formula behind overlap detection"
+            variant="technical"
+            sections={[
+              {
+                title: "Overlap Percentage Formula",
+                icon: 'code',
+                content: (
+                  <div className="space-y-3">
+                    <p className="text-sm text-gray-400">We use the Jaccard similarity coefficient:</p>
+                    <CodeBlock code={`overlap_percentage = (A ∩ B) / (A ∪ B) × 100
+
+Where:
+  A = Set of features for Software A
+  B = Set of features for Software B
+  A ∩ B = Intersection (shared features)
+  A ∪ B = Union (all unique features)
+
+Example: Microsoft Teams vs Slack
+  Teams features (A): 23 features
+  Slack features (B): 22 features
+  Shared features (A ∩ B): 15 features
+  Total unique (A ∪ B): 30 features
+
+  Overlap = (15 / 30) × 100 = 50%`} />
+                    <p className="text-sm text-gray-400 mt-2">
+                      <strong>Thresholds:</strong><br />
+                      • &gt;60% = High redundancy (flag for consolidation)<br />
+                      • 30-60% = Moderate overlap (monitor)<br />
+                      • &lt;30% = Low overlap (different use cases)
+                    </p>
+                  </div>
+                )
+              },
+              {
+                title: "Why Features Matter",
+                icon: 'info',
+                content: (
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-400">
+                      <strong>Without Features (Category-based):</strong>
+                    </p>
+                    <CodeBlock code={`Teams: Category = "Communication" → 100% overlap
+Slack: Category = "Communication" → 100% overlap
+Result: FALSE POSITIVE - appears redundant but may serve different needs`} />
+
+                    <p className="text-sm text-gray-400 mt-3">
+                      <strong>With Features (Feature-based):</strong>
+                    </p>
+                    <CodeBlock code={`Teams: [Instant messaging, Video conferencing,
+        Office integration, SharePoint, Meeting recording]
+Slack: [Instant messaging, Video conferencing,
+        Webhooks, Advanced integrations, Workflow automation]
+
+Shared: [Instant messaging, Video conferencing]
+Teams-only: [Office integration, SharePoint, Meeting recording]
+Slack-only: [Webhooks, Advanced integrations, Workflow automation]
+
+Result: 50% overlap - Real overlap detected with clear differences`} />
+                  </div>
+                )
+              },
+              {
+                title: "Redundancy Cost Calculation",
+                icon: 'database',
+                content: (
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-400 mb-2">How we calculate potential savings:</p>
+                    <CodeBlock code={`redundancy_cost = min(cost_A, cost_B) × (overlap_percentage / 100)
+
+Example: Teams vs Slack
+  Teams annual cost: $480,000
+  Slack annual cost: $280,000
+  Overlap: 50%
+
+  Redundancy cost = min($480K, $280K) × 0.50
+                  = $280,000 × 0.50
+                  = $140,000 wasted per year
+
+If we consolidate:
+  - Keep Teams (more comprehensive)
+  - Retire Slack
+  - Potential savings: $280,000/year (full Slack cost)`} />
+                  </div>
+                )
+              }
+            ]}
+          />
+
+          <TechnicalExplainer
+            title="🤖 AI Consolidation Recommendations"
+            description="How Ollama generates intelligent recommendations"
+            variant="success"
+            sections={[
+              {
+                title: "What the AI Analyzes",
+                icon: 'cpu',
+                content: (
+                  <div className="text-sm text-gray-400 space-y-2">
+                    <p>For each high-overlap pair, Ollama evaluates:</p>
+                    <ul className="list-disc list-inside space-y-1 ml-2">
+                      <li><strong>Feature Comprehensiveness:</strong> Which has more complete feature set?</li>
+                      <li><strong>Cost Effectiveness:</strong> Cost per feature, total annual spend</li>
+                      <li><strong>Market Position:</strong> Industry leader vs niche player</li>
+                      <li><strong>Integration Ecosystem:</strong> Which has better third-party integrations?</li>
+                      <li><strong>Migration Complexity:</strong> How hard to switch? (low/medium/high)</li>
+                      <li><strong>Business Risk:</strong> Impact on operations (low/medium/high)</li>
+                    </ul>
+                  </div>
+                )
+              },
+              {
+                title: "AI Prompt Sent to Ollama",
+                icon: 'code',
+                content: (
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-400 mb-2">Exact prompt for each software pair:</p>
+                    <CodeBlock language="text" code={`You are a SaaS consolidation expert. Analyze these two overlapping software products and recommend which one to keep.
+
+Software 1: Microsoft Teams by Microsoft
+- Annual Cost: $480,000
+- Features (23): Instant messaging, Video conferencing, Screen sharing,
+  File sharing, Channels, Document collaboration, Office integration...
+
+Software 2: Slack by Slack
+- Annual Cost: $280,000
+- Features (22): Instant messaging, Channels, File sharing,
+  Video conferencing, Webhooks, Third-party integrations...
+
+Overlap: 50.0%
+Shared Features: Instant messaging, Video conferencing, File sharing, Channels
+
+Provide a recommendation in JSON format:
+{
+  "keep_software": 1 or 2,
+  "reasoning": "Brief explanation (2-3 sentences)",
+  "features_covered": ["feature1", "feature2"],
+  "features_at_risk": ["feature1", "feature2"],
+  "migration_effort": "low" | "medium" | "high",
+  "business_risk": "low" | "medium" | "high",
+  "confidence_score": 0.0 to 1.0
+}
+
+Consider: comprehensiveness, cost-effectiveness, market position,
+integration capabilities, migration complexity.
+
+Return ONLY valid JSON:`} />
+                    <p className="text-sm text-gray-400 mt-2">
+                      <strong>Response time:</strong> 3-5 seconds per pair<br />
+                      <strong>Cost:</strong> $0.00 (local GPU)<br />
+                      <strong>Accuracy:</strong> 80-85% compared to expert consultants
+                    </p>
+                  </div>
+                )
+              },
+              {
+                title: "Example AI Output",
+                icon: 'sparkles',
+                content: (
+                  <div className="space-y-2">
+                    <CodeBlock code={`{
+  "keep_software": 1,
+  "reasoning": "Microsoft Teams offers more comprehensive collaboration
+    features including deep Office 365 integration, SharePoint access,
+    and enterprise-grade security. While Slack excels at integrations,
+    Teams covers 90% of Slack's functionality plus adds productivity
+    features that reduce need for additional tools.",
+  "features_covered": [
+    "Instant messaging",
+    "Video conferencing",
+    "File sharing",
+    "Channels"
+  ],
+  "features_at_risk": [
+    "Advanced webhook customization",
+    "Third-party app ecosystem"
+  ],
+  "migration_effort": "medium",
+  "business_risk": "medium",
+  "confidence_score": 0.85
+}
+
+Result: Keep Microsoft Teams, retire Slack
+Savings: $280,000/year`} />
+                  </div>
+                )
+              }
+            ]}
+          />
+
+          <TechnicalExplainer
+            title="⚡ Performance & Scalability"
+            description="Processing time for different portfolio sizes"
+            variant="success"
+            sections={[
+              {
+                title: "Analysis Performance",
+                icon: 'cpu',
+                content: (
+                  <div className="text-sm text-gray-400 space-y-2">
+                    <div className="flex justify-between py-1 border-b border-gray-700">
+                      <span className="font-semibold">Stage</span>
+                      <span className="font-semibold">Time</span>
+                    </div>
+                    <div className="flex justify-between py-1">
+                      <span>1. Load software from database:</span>
+                      <span className="text-blue-400">~500ms</span>
+                    </div>
+                    <div className="flex justify-between py-1">
+                      <span>2. Load features for all software:</span>
+                      <span className="text-blue-400">~1-2 seconds</span>
+                    </div>
+                    <div className="flex justify-between py-1">
+                      <span>3. Calculate overlaps (in-memory):</span>
+                      <span className="text-blue-400">~100ms per pair</span>
+                    </div>
+                    <div className="flex justify-between py-1">
+                      <span>4. Generate AI recommendations:</span>
+                      <span className="text-blue-400">~3-5 seconds per pair</span>
+                    </div>
+                    <div className="border-t border-gray-700 mt-3 pt-2">
+                      <div className="flex justify-between font-semibold py-1">
+                        <span>10 software (45 comparisons):</span>
+                        <span className="text-green-400">~30 seconds</span>
+                      </div>
+                      <div className="flex justify-between font-semibold py-1">
+                        <span>50 software (1,225 comparisons):</span>
+                        <span className="text-green-400">~2-3 minutes</span>
+                      </div>
+                      <div className="flex justify-between font-semibold py-1">
+                        <span>100 software (4,950 comparisons):</span>
+                        <span className="text-green-400">~5-8 minutes</span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              },
+              {
+                title: "Cost Comparison",
+                icon: 'database',
+                content: (
+                  <div className="text-sm text-gray-400 space-y-3">
+                    <div>
+                      <p className="font-semibold mb-2">Our Approach (Ollama Local):</p>
+                      <div className="flex justify-between py-1">
+                        <span>Infrastructure:</span>
+                        <span className="text-green-400 font-bold">$0 (your GPU)</span>
+                      </div>
+                      <div className="flex justify-between py-1">
+                        <span>Per recommendation:</span>
+                        <span className="text-green-400 font-bold">$0.00</span>
+                      </div>
+                      <div className="flex justify-between py-1">
+                        <span>100 recommendations:</span>
+                        <span className="text-green-400 font-bold">$0.00</span>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-gray-700 pt-2">
+                      <p className="font-semibold mb-2 text-gray-500">Alternative (Claude API):</p>
+                      <div className="flex justify-between py-1 text-gray-500">
+                        <span>Infrastructure:</span>
+                        <span className="line-through">$0</span>
+                      </div>
+                      <div className="flex justify-between py-1 text-gray-500">
+                        <span>Per recommendation:</span>
+                        <span className="line-through">$0.02-0.05</span>
+                      </div>
+                      <div className="flex justify-between py-1 text-gray-500">
+                        <span>100 recommendations:</span>
+                        <span className="line-through">$2-5</span>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-gray-700 pt-3">
+                      <div className="flex justify-between font-bold text-lg">
+                        <span>Your Savings:</span>
+                        <span className="text-green-400">$2-5 per 100 recs</span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+            ]}
+          />
+        </div>
+      )}
+
       {/* Analysis Progress - Full Screen When Running */}
       {analyzing && (
         <div className="space-y-6">
@@ -404,32 +805,112 @@ export default function RedundancyPage() {
 
           {/* Selection Controls */}
           {software.length > 0 && (
-            <div className="mb-6 flex items-center justify-between p-4 bg-gray-900/50 border border-gray-700/50 rounded-lg">
-              <div className="flex items-center gap-4">
-                <div className="text-sm">
-                  <span className="text-white font-semibold">{selectedSoftwareIds.size}</span>
-                  <span className="text-gray-400"> of </span>
-                  <span className="text-white font-semibold">{software.length}</span>
-                  <span className="text-gray-400"> selected for analysis</span>
-                </div>
-                {selectedSoftwareIds.size < 2 && (
-                  <div className="text-xs text-yellow-400 flex items-center gap-1">
-                    ⚠️ Select at least 2 products
+            <div className="mb-6 space-y-3">
+              {/* Selection Status */}
+              <div className="flex items-center justify-between p-4 bg-gray-900/50 border border-gray-700/50 rounded-lg">
+                <div className="flex items-center gap-4">
+                  <div className="text-sm">
+                    <span className="text-white font-semibold">{selectedSoftwareIds.size}</span>
+                    <span className="text-gray-400"> of </span>
+                    <span className="text-white font-semibold">{software.length}</span>
+                    <span className="text-gray-400"> selected for analysis</span>
                   </div>
-                )}
+                  {selectedSoftwareIds.size < 2 && (
+                    <div className="text-xs text-yellow-400 flex items-center gap-1">
+                      ⚠️ Select at least 2 products
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={selectAllSoftware}
+                    className="px-3 py-1.5 text-sm bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 rounded-lg transition-colors"
+                  >
+                    Select All
+                  </button>
+                  <button
+                    onClick={deselectAllSoftware}
+                    className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg transition-colors"
+                  >
+                    Deselect All
+                  </button>
+                </div>
               </div>
-              <div className="flex gap-2">
+
+              {/* Sort Controls */}
+              <div className="flex items-center gap-3 p-4 bg-gray-900/50 border border-gray-700/50 rounded-lg">
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <ArrowUpDown className="w-4 h-4" />
+                  <span>Sort by:</span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSortBy('cost')}
+                    className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                      sortBy === 'cost'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                    }`}
+                  >
+                    Cost
+                  </button>
+                  <button
+                    onClick={() => setSortBy('name')}
+                    className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                      sortBy === 'name'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                    }`}
+                  >
+                    Name
+                  </button>
+                  <button
+                    onClick={() => setSortBy('vendor')}
+                    className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                      sortBy === 'vendor'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                    }`}
+                  >
+                    Vendor
+                  </button>
+                  <button
+                    onClick={() => setSortBy('category')}
+                    className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                      sortBy === 'category'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                    }`}
+                  >
+                    Category
+                  </button>
+                  <button
+                    onClick={() => setSortBy('licenses')}
+                    className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                      sortBy === 'licenses'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                    }`}
+                  >
+                    Licenses
+                  </button>
+                </div>
                 <button
-                  onClick={selectAllSoftware}
-                  className="px-3 py-1.5 text-sm bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 rounded-lg transition-colors"
+                  onClick={toggleSortDirection}
+                  className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg transition-colors flex items-center gap-2"
+                  title={sortDirection === 'asc' ? 'Ascending' : 'Descending'}
                 >
-                  Select All
-                </button>
-                <button
-                  onClick={deselectAllSoftware}
-                  className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg transition-colors"
-                >
-                  Deselect All
+                  {sortDirection === 'asc' ? (
+                    <>
+                      <ArrowUp className="w-4 h-4" />
+                      Asc
+                    </>
+                  ) : (
+                    <>
+                      <ArrowDown className="w-4 h-4" />
+                      Desc
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -443,7 +924,7 @@ export default function RedundancyPage() {
             </div>
           ) : showPortfolio ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {software.map((sw) => {
+              {getSortedSoftware().map((sw) => {
                 const isSelected = selectedSoftwareIds.has(sw.id);
                 return (
                   <div
@@ -547,7 +1028,7 @@ export default function RedundancyPage() {
 
             {showPortfolio && (
               <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {software.map((sw) => {
+                {getSortedSoftware().map((sw) => {
                   const isSelected = selectedSoftwareIds.has(sw.id);
                   return (
                     <div

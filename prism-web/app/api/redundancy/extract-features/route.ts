@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     // Resolve slug to UUID if needed
     const resolvedCompanyId = await resolveCompanyId(companyId);
 
-    // Fetch software products (note: software table doesn't have description column)
+    // Fetch software products from software_assets table
     // We'll extract features based on software_name, vendor_name, and category
     let softwareQuery;
     if (softwareIds && softwareIds.length > 0) {
@@ -79,8 +79,9 @@ export async function POST(request: NextRequest) {
           vendor_name,
           category,
           COALESCE(software_name || ' ' || vendor_name, software_name) as description
-        FROM software
+        FROM software_assets
         WHERE company_id = ${resolvedCompanyId}
+          AND contract_status = 'active'
           AND id = ANY(${softwareIds})
       `;
     } else {
@@ -91,8 +92,9 @@ export async function POST(request: NextRequest) {
           vendor_name,
           category,
           COALESCE(software_name || ' ' || vendor_name, software_name) as description
-        FROM software
+        FROM software_assets
         WHERE company_id = ${resolvedCompanyId}
+          AND contract_status = 'active'
       `;
     }
 
@@ -248,7 +250,7 @@ export async function GET(request: NextRequest) {
         vendor_name,
         category,
         COALESCE(software_name || ' ' || vendor_name, software_name) as description
-      FROM software
+      FROM software_assets
       WHERE id = ${softwareId} AND company_id = ${companyId}
     `;
 
