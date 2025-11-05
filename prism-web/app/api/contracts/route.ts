@@ -23,13 +23,9 @@ export async function GET(request: NextRequest) {
     if (contractId) {
       // Get specific contract with details
       const contractResult = await sql`
-        SELECT
-          c.*,
-          s.software_name,
-          s.vendor_name as software_vendor_name
+        SELECT c.*
         FROM contracts c
-        LEFT JOIN software s ON c.software_id = s.id
-        WHERE c.id = ${contractId}
+        WHERE c.contract_id = ${contractId}
         LIMIT 1
       `;
 
@@ -77,18 +73,15 @@ export async function GET(request: NextRequest) {
       const contractsResult = await sql`
         SELECT
           c.*,
-          s.software_name,
-          s.vendor_name as software_vendor_name,
           (
             SELECT COUNT(*) FROM contract_risk_alerts
-            WHERE contract_id = c.id AND status = 'active'
+            WHERE contract_id = c.contract_id AND status = 'active'
           ) as active_alerts_count,
           (
             SELECT COUNT(*) FROM contract_risk_alerts
-            WHERE contract_id = c.id AND status = 'active' AND severity IN ('critical', 'high')
+            WHERE contract_id = c.contract_id AND status = 'active' AND severity IN ('critical', 'high')
           ) as critical_alerts_count
         FROM contracts c
-        LEFT JOIN software s ON c.software_id = s.id
         WHERE c.company_id = ${companyId}
         ORDER BY c.created_at DESC
       `;
@@ -101,7 +94,7 @@ export async function GET(request: NextRequest) {
           contracts.map(async (contract) => {
             const alerts = await sql`
               SELECT * FROM contract_risk_alerts
-              WHERE contract_id = ${contract.id} AND status = 'active'
+              WHERE contract_id = ${contract.contract_id} AND status = 'active'
               ORDER BY
                 CASE severity
                   WHEN 'critical' THEN 1
@@ -157,7 +150,7 @@ export async function DELETE(request: NextRequest) {
     // Delete contract (cascades to risk_alerts and reminders)
     await sql`
       DELETE FROM contracts
-      WHERE id = ${contractId}
+      WHERE contract_id = ${contractId}
     `;
 
     return NextResponse.json({
