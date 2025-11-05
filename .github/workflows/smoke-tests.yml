@@ -56,14 +56,16 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            const body = `## 🚨 Smoke Tests Failed
+
+            **Commit:** ${context.sha.substring(0, 7)}
+            **Critical issues detected** - deployment may have broken core functionality.
+
+            Check the [workflow run](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) for details.`;
+
             github.rest.repos.createCommitComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               commit_sha: context.sha,
-              body: `## 🚨 Smoke Tests Failed
-
-**Commit:** ${context.sha.substring(0, 7)}
-**Critical issues detected** - deployment may have broken core functionality.
-
-Check the [workflow run](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) for details.`
+              body: body
             });
