@@ -136,15 +136,27 @@ export function OfficeMap({ offices, companyId }: OfficeMapProps) {
 
   if (!MAPBOX_TOKEN) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-200px)] bg-gray-50 rounded-xl">
-        <div className="text-center p-8">
-          <MapIcon className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Mapbox Token Required
+      <div className="flex items-center justify-center h-[calc(100vh-200px)] bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border-2 border-dashed border-gray-300">
+        <div className="text-center p-8 max-w-2xl">
+          <MapIcon className="w-20 h-20 mx-auto mb-4 text-blue-400" />
+          <h3 className="text-2xl font-semibold text-gray-900 mb-3">
+            Map Configuration Required
           </h3>
-          <p className="text-gray-600 max-w-md">
-            Please configure NEXT_PUBLIC_MAPBOX_TOKEN in your environment
-            variables to enable the map feature.
+          <p className="text-gray-600 mb-4">
+            To display the interactive office map, you need to configure a Mapbox access token.
+          </p>
+          <div className="bg-white rounded-lg p-4 mb-4 text-left border border-gray-200">
+            <h4 className="font-semibold text-sm text-gray-900 mb-2">Setup Instructions:</h4>
+            <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
+              <li>Visit <a href="https://account.mapbox.com/access-tokens/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Mapbox Access Tokens</a></li>
+              <li>Create a free account or sign in</li>
+              <li>Copy your default public token</li>
+              <li>Add it to your environment variables as <code className="bg-gray-100 px-1 rounded">NEXT_PUBLIC_MAPBOX_TOKEN</code></li>
+              <li>Restart your development server</li>
+            </ol>
+          </div>
+          <p className="text-sm text-gray-500">
+            You have {offices.length} office location{offices.length !== 1 ? "s" : ""} ready to display once configured.
           </p>
         </div>
       </div>
