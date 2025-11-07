@@ -71,8 +71,8 @@ interface SoftwareItem {
   software_name: string;
   vendor_name: string;
   category: string;
-  annual_cost: number;
-  license_count: number;
+  total_annual_cost: number;
+  total_licenses: number;
   active_users: number;
 }
 
@@ -219,11 +219,12 @@ export default function AlternativesPage({
           alternativeId: alternative.id || 'temp-id', // Will need to fetch from DB after saving to software_alternatives
 
           currentAnnualCost: alternative.roi.current_annual_cost,
-          currentLicenseCount: currentSoftware.license_count,
-          currentUtilizationRate: (currentSoftware.active_users / currentSoftware.license_count) * 100,
+          currentLicenseCount: currentSoftware.total_licenses || currentSoftware.license_count || 0,
+          currentUtilizationRate: currentSoftware.total_licenses > 0 ?
+            (currentSoftware.active_users / currentSoftware.total_licenses) * 100 : 0,
 
           projectedAnnualCost: alternative.roi.projected_annual_cost,
-          projectedLicenseCount: currentSoftware.license_count,
+          projectedLicenseCount: currentSoftware.total_licenses || currentSoftware.license_count || 0,
 
           annualSavings: alternative.roi.annual_savings,
           totalCostOfOwnership3yr: alternative.roi.total_cost_of_ownership_3yr,
@@ -385,7 +386,7 @@ export default function AlternativesPage({
                   portfolioSoftware.map((software) => (
                     <SelectItem key={software.id} value={software.id}>
                       {software.software_name} ({software.vendor_name}) - $
-                      {software.annual_cost?.toLocaleString() || 0}/yr
+                      {software.total_annual_cost?.toLocaleString() || 0}/yr
                     </SelectItem>
                   ))
                 )}

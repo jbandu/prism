@@ -134,10 +134,27 @@ export default function CompanyDashboard({
     <div className="space-y-6 pb-8">
       {/* HERO SECTION */}
       <div className="bg-gradient-to-r from-prism-primary to-prism-secondary rounded-lg p-8 text-white">
-        <h1 className="text-3xl font-bold mb-2">
-          {company?.company_name || 'Company'} - Software Portfolio
-        </h1>
-        <p className="text-blue-100 mb-6">Comprehensive view of your software investments and optimization opportunities</p>
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h1 className="text-3xl font-bold">
+              {company?.company_name || 'Company'} - Software Portfolio
+            </h1>
+            <p className="text-blue-100 mt-2">Comprehensive view of your software investments and optimization opportunities</p>
+          </div>
+          <Button
+            onClick={() => {
+              const url = `/api/software/export?companyId=${params.companyId}`;
+              window.open(url, '_blank');
+            }}
+            variant="secondary"
+            size="sm"
+            className="bg-white/20 hover:bg-white/30 border-white/30 text-white"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </Button>
+        </div>
+        <div className="mb-6"></div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
           <Card className="bg-white/10 border-white/20 backdrop-blur">
