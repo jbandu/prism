@@ -134,8 +134,9 @@ export async function getSoftwareByCompany(
 ): Promise<Software[]> {
   if (!filters?.category && !filters?.search) {
     const result = await sql`
-      SELECT * FROM software_assets
+      SELECT * FROM software
       WHERE company_id = ${companyId}
+        AND deleted_at IS NULL
       ORDER BY total_annual_cost DESC
     `;
     return result as Software[];
@@ -143,8 +144,10 @@ export async function getSoftwareByCompany(
 
   if (filters.category && !filters.search) {
     const result = await sql`
-      SELECT * FROM software_assets
-      WHERE company_id = ${companyId} AND category = ${filters.category}
+      SELECT * FROM software
+      WHERE company_id = ${companyId}
+        AND category = ${filters.category}
+        AND deleted_at IS NULL
       ORDER BY total_annual_cost DESC
     `;
     return result as Software[];
@@ -153,9 +156,10 @@ export async function getSoftwareByCompany(
   if (!filters.category && filters.search) {
     const searchPattern = `%${filters.search}%`;
     const result = await sql`
-      SELECT * FROM software_assets
+      SELECT * FROM software
       WHERE company_id = ${companyId}
         AND (software_name ILIKE ${searchPattern} OR vendor_name ILIKE ${searchPattern})
+        AND deleted_at IS NULL
       ORDER BY total_annual_cost DESC
     `;
     return result as Software[];
@@ -164,20 +168,21 @@ export async function getSoftwareByCompany(
   // Both category and search
   const searchPattern = `%${filters.search}%`;
   const result = await sql`
-    SELECT * FROM software_assets
+    SELECT * FROM software
     WHERE company_id = ${companyId}
       AND category = ${filters.category}
       AND (software_name ILIKE ${searchPattern} OR vendor_name ILIKE ${searchPattern})
+      AND deleted_at IS NULL
     ORDER BY total_annual_cost DESC
   `;
   return result as Software[];
 }
 
 export async function getSoftwareById(softwareId: string): Promise<Software | null> {
-  // Try both 'id' and 'software_id' to handle different schema versions
   const result = await sql`
-    SELECT * FROM software_assets
-    WHERE software_id = ${softwareId} OR id = ${softwareId}
+    SELECT * FROM software
+    WHERE id = ${softwareId}
+      AND deleted_at IS NULL
   `;
   return result[0] as Software || null;
 }
@@ -194,7 +199,7 @@ export async function createSoftware(data: {
   renewal_date: string;
 }): Promise<Software> {
   const result = await sql`
-    INSERT INTO software_assets (
+    INSERT INTO software (
       company_id, software_name, vendor_name, category,
       total_annual_cost, total_licenses, active_users,
       license_type, renewal_date, contract_status
@@ -227,9 +232,10 @@ export async function updateSoftware(
   values.push(softwareId);
 
   const result = await sql`
-    UPDATE software_assets
-    SET ${sql(updateFields)}
-    WHERE software_id = ${softwareId}
+    UPDATE software
+    SET ${sql(updateFields)}, updated_at = now()
+    WHERE id = ${softwareId}
+    AND deleted_at IS NULL
     RETURNING *
   `;
 
@@ -238,9 +244,11 @@ export async function updateSoftware(
 
 export async function deleteSoftware(softwareId: string): Promise<boolean> {
   try {
+    // Soft delete
     await sql`
-      DELETE FROM software_assets
-      WHERE software_id = ${softwareId}
+      UPDATE software
+      SET deleted_at = now()
+      WHERE id = ${softwareId}
     `;
     return true;
   } catch (error) {
@@ -266,8 +274,9 @@ export async function getCompanyDashboardMetrics(
       COUNT(CASE WHEN utilization_rate < 50 THEN 1 END) as underutilized_count,
       COUNT(CASE WHEN days_to_renewal <= 30 AND days_to_renewal > 0 THEN 1 END) as renewals_next_30_days,
       COUNT(CASE WHEN contract_status = 'expiring_soon' THEN 1 END) as high_risk_contracts
-    FROM software_assets
+    FROM software
     WHERE company_id = ${companyId}
+      AND deleted_at IS NULL
   `;
 
   const metrics = metricsResult[0];
@@ -275,8 +284,9 @@ export async function getCompanyDashboardMetrics(
   // Get top cost drivers
   const topCostDrivers = await sql`
     SELECT software_name, total_annual_cost as annual_cost
-    FROM software_assets
+    FROM software
     WHERE company_id = ${companyId}
+      AND deleted_at IS NULL
     ORDER BY total_annual_cost DESC
     LIMIT 5
   `;

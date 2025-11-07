@@ -32,15 +32,16 @@ export async function POST(request: NextRequest) {
 
     console.log(`\n💼 Generating negotiation playbook for software: ${softwareId}`);
 
-    // Get software details from software_assets view
+    // Get software details
     const softwareResult = await sql`
       SELECT
-        sa.*,
+        s.*,
         c.id as company_id,
         c.company_name
-      FROM software_assets sa
-      JOIN companies c ON sa.company_id = c.id
-      WHERE sa.id = ${softwareId}
+      FROM software s
+      JOIN companies c ON s.company_id = c.id
+      WHERE s.id = ${softwareId}
+        AND s.deleted_at IS NULL
     `;
 
     if (softwareResult.length === 0) {
@@ -204,12 +205,13 @@ export async function GET(request: NextRequest) {
     const playbooks = await sql`
       SELECT
         p.*,
-        sa.software_name,
-        sa.vendor_name,
-        sa.total_annual_cost as current_annual_cost
+        s.software_name,
+        s.vendor_name,
+        s.total_annual_cost as current_annual_cost
       FROM negotiation_playbooks p
-      JOIN software_assets sa ON p.software_id = sa.id
+      JOIN software s ON p.software_id = s.id
       WHERE p.software_id = ${softwareId}
+        AND s.deleted_at IS NULL
       ORDER BY p.generated_at DESC
       LIMIT 1
     `;
