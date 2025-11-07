@@ -32,15 +32,15 @@ export async function POST(request: NextRequest) {
 
     console.log(`\n💼 Generating negotiation playbook for software: ${softwareId}`);
 
-    // Get software details
+    // Get software details from software_assets view
     const softwareResult = await sql`
       SELECT
-        s.*,
+        sa.*,
         c.id as company_id,
         c.company_name
-      FROM software s
-      JOIN companies c ON s.company_id = c.id
-      WHERE s.id = ${softwareId}
+      FROM software_assets sa
+      JOIN companies c ON sa.company_id = c.id
+      WHERE sa.id = ${softwareId}
     `;
 
     if (softwareResult.length === 0) {
@@ -62,25 +62,26 @@ export async function POST(request: NextRequest) {
 
     // Calculate contract length and total spent
     const contractStart = new Date(software.contract_start_date);
-    const contractEnd = new Date(software.contract_end_date);
+    const contractEnd = new Date(software.contract_end_date || software.renewal_date);
     const contractLengthYears = Math.max(
       (contractEnd.getTime() - contractStart.getTime()) / (365 * 24 * 60 * 60 * 1000),
       1
     );
 
-    const totalSpent = (software.annual_cost || 0) * contractLengthYears;
+    const annualCost = parseFloat(software.total_annual_cost) || 0;
+    const totalSpent = annualCost * contractLengthYears;
 
     // Prepare data for AI analysis
     const negotiationData = {
       software_name: software.software_name,
       vendor_name: software.vendor_name,
       category: software.category,
-      annual_cost: parseFloat(software.annual_cost) || 0,
-      license_count: software.license_count || 0,
-      active_users: Math.floor((software.license_count || 0) * ((software.utilization_rate || 100) / 100)),
-      utilization_rate: parseFloat(software.utilization_rate) || 100,
+      annual_cost: annualCost,
+      license_count: software.total_licenses || 0,
+      active_users: software.active_users || 0,
+      utilization_rate: parseFloat(software.utilization_rate) || 0,
       contract_start_date: software.contract_start_date,
-      renewal_date: software.contract_end_date,
+      renewal_date: software.renewal_date || software.contract_end_date,
       contract_length_years: contractLengthYears,
       total_spent_to_date: totalSpent,
       payment_history: 'good' as const // Could be enhanced with actual payment data
@@ -203,11 +204,11 @@ export async function GET(request: NextRequest) {
     const playbooks = await sql`
       SELECT
         p.*,
-        s.software_name,
-        s.vendor_name,
-        s.annual_cost as current_annual_cost
+        sa.software_name,
+        sa.vendor_name,
+        sa.total_annual_cost as current_annual_cost
       FROM negotiation_playbooks p
-      JOIN software s ON p.software_id = s.id
+      JOIN software_assets sa ON p.software_id = sa.id
       WHERE p.software_id = ${softwareId}
       ORDER BY p.generated_at DESC
       LIMIT 1
