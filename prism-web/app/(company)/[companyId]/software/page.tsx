@@ -36,8 +36,14 @@ import {
   Users,
   TrendingUp,
   Layers,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import type { Software } from "@/types";
+
+type SortField = "software" | "category" | "cost" | "utilization" | "waste" | "renewal";
+type SortOrder = "asc" | "desc";
 
 export default function SoftwarePage({
   params,
@@ -49,6 +55,8 @@ export default function SoftwarePage({
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [actualCompanyId, setActualCompanyId] = useState<string>("");
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
 
   useEffect(() => {
     fetchCompanyAndSoftware();
@@ -140,12 +148,77 @@ export default function SoftwarePage({
     ? software.reduce((sum, s) => sum + (parseFloat(s.utilization_rate as any) || 0), 0) / software.length
     : 0;
 
+  // Handle sorting
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Toggle sort order if clicking the same field
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      // Set new field and default to ascending
+      setSortField(field);
+      setSortOrder("asc");
+    }
+  };
+
+  // Get sort icon for a column
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="w-4 h-4 ml-1 opacity-40" />;
+    }
+    return sortOrder === "asc" ? (
+      <ArrowUp className="w-4 h-4 ml-1" />
+    ) : (
+      <ArrowDown className="w-4 h-4 ml-1" />
+    );
+  };
+
   // Filter software based on search
   const filteredSoftware = software.filter((s) => {
     const matchesSearch = searchTerm === "" ||
       s.software_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       s.vendor_name.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
+  });
+
+  // Sort filtered software
+  const sortedSoftware = [...filteredSoftware].sort((a, b) => {
+    if (!sortField) return 0;
+
+    let aValue: any;
+    let bValue: any;
+
+    switch (sortField) {
+      case "software":
+        aValue = a.software_name.toLowerCase();
+        bValue = b.software_name.toLowerCase();
+        break;
+      case "category":
+        aValue = a.category.toLowerCase();
+        bValue = b.category.toLowerCase();
+        break;
+      case "cost":
+        aValue = parseFloat(a.total_annual_cost as any) || 0;
+        bValue = parseFloat(b.total_annual_cost as any) || 0;
+        break;
+      case "utilization":
+        aValue = parseFloat(a.utilization_rate as any) || 0;
+        bValue = parseFloat(b.utilization_rate as any) || 0;
+        break;
+      case "waste":
+        aValue = parseFloat(a.waste_amount as any) || 0;
+        bValue = parseFloat(b.waste_amount as any) || 0;
+        break;
+      case "renewal":
+        aValue = new Date(a.renewal_date).getTime();
+        bValue = new Date(b.renewal_date).getTime();
+        break;
+      default:
+        return 0;
+    }
+
+    if (aValue < bValue) return sortOrder === "asc" ? -1 : 1;
+    if (aValue > bValue) return sortOrder === "asc" ? 1 : -1;
+    return 0;
   });
 
   // Get unique categories
@@ -248,7 +321,7 @@ export default function SoftwarePage({
             <div>
               <CardTitle>Software Inventory</CardTitle>
               <CardDescription>
-                {filteredSoftware.length} of {totalSoftware} applications
+                {sortedSoftware.length} of {totalSoftware} applications
               </CardDescription>
             </div>
           </div>
@@ -283,7 +356,7 @@ export default function SoftwarePage({
             <div className="text-center py-12">
               <p className="text-gray-500">Loading software...</p>
             </div>
-          ) : filteredSoftware.length === 0 ? (
+          ) : sortedSoftware.length === 0 ? (
             <div className="text-center py-12">
               <Package className="w-12 h-12 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-500 mb-2">No software found</p>
@@ -298,19 +371,67 @@ export default function SoftwarePage({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Software</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Annual Cost</TableHead>
+                    <TableHead>
+                      <button
+                        onClick={() => handleSort("software")}
+                        className="flex items-center hover:text-prism-primary transition-colors font-semibold"
+                      >
+                        Software
+                        {getSortIcon("software")}
+                      </button>
+                    </TableHead>
+                    <TableHead>
+                      <button
+                        onClick={() => handleSort("category")}
+                        className="flex items-center hover:text-prism-primary transition-colors font-semibold"
+                      >
+                        Category
+                        {getSortIcon("category")}
+                      </button>
+                    </TableHead>
+                    <TableHead>
+                      <button
+                        onClick={() => handleSort("cost")}
+                        className="flex items-center hover:text-prism-primary transition-colors font-semibold"
+                      >
+                        Annual Cost
+                        {getSortIcon("cost")}
+                      </button>
+                    </TableHead>
                     <TableHead>Licenses</TableHead>
-                    <TableHead>Utilization</TableHead>
-                    <TableHead>Waste</TableHead>
-                    <TableHead>Renewal</TableHead>
+                    <TableHead>
+                      <button
+                        onClick={() => handleSort("utilization")}
+                        className="flex items-center hover:text-prism-primary transition-colors font-semibold"
+                      >
+                        Utilization
+                        {getSortIcon("utilization")}
+                      </button>
+                    </TableHead>
+                    <TableHead>
+                      <button
+                        onClick={() => handleSort("waste")}
+                        className="flex items-center hover:text-prism-primary transition-colors font-semibold"
+                      >
+                        Waste
+                        {getSortIcon("waste")}
+                      </button>
+                    </TableHead>
+                    <TableHead>
+                      <button
+                        onClick={() => handleSort("renewal")}
+                        className="flex items-center hover:text-prism-primary transition-colors font-semibold"
+                      >
+                        Renewal
+                        {getSortIcon("renewal")}
+                      </button>
+                    </TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredSoftware.map((item) => {
+                  {sortedSoftware.map((item) => {
                     const utilization = parseFloat(item.utilization_rate as any) || 0;
                     const utilizationBadge = getUtilizationBadge(utilization);
                     const daysToRenewal = getDaysToRenewal(item.renewal_date);
