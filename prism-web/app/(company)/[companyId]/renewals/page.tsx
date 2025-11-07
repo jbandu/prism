@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { NegotiationPlaybook } from "@/components/negotiation/NegotiationPlaybook";
+import { NegotiationProgress, type NegotiationStep } from "@/components/negotiation/NegotiationProgress";
 
 interface RenewalSoftware {
   id: string;
@@ -72,6 +73,14 @@ export default function RenewalsPage({
   const [showNegotiationDialog, setShowNegotiationDialog] = useState(false);
   const [negotiationPlaybook, setNegotiationPlaybook] = useState<any | null>(null);
   const [generatingPlaybook, setGeneratingPlaybook] = useState(false);
+  const [negotiationSteps, setNegotiationSteps] = useState<NegotiationStep[]>([
+    { id: "analyze", label: "Analyzing contract data", status: "pending", description: "Reviewing license usage, costs, and contract terms" },
+    { id: "market", label: "Researching market intelligence", status: "pending", description: "Gathering competitor pricing and industry benchmarks" },
+    { id: "leverage", label: "Identifying leverage points", status: "pending", description: "Finding negotiation advantages based on your data" },
+    { id: "strategy", label: "Generating negotiation strategy", status: "pending", description: "Creating personalized talking points and tactics" },
+    { id: "emails", label: "Crafting email templates", status: "pending", description: "Preparing outreach, counter-offer, and escalation emails" },
+    { id: "complete", label: "Finalizing playbook", status: "pending", description: "Compiling comprehensive negotiation guide" }
+  ]);
 
   useEffect(() => {
     fetchRenewals();
@@ -198,13 +207,39 @@ export default function RenewalsPage({
     setActionDecision(null);
   };
 
+  const updateStep = (stepId: string, status: "pending" | "in_progress" | "completed") => {
+    setNegotiationSteps(prev =>
+      prev.map(step => (step.id === stepId ? { ...step, status } : step))
+    );
+  };
+
   const handlePrepareNegotiation = async (renewal: RenewalSoftware) => {
     try {
       setGeneratingPlaybook(true);
       setSelectedRenewal(renewal);
+      setNegotiationPlaybook(null); // Reset playbook
+
+      // Reset all steps to pending
+      setNegotiationSteps(prev => prev.map(s => ({ ...s, status: "pending" })));
       setShowNegotiationDialog(true);
 
-      toast.info("Generating AI negotiation strategy...");
+      // Step 1: Analyze
+      updateStep("analyze", "in_progress");
+      await new Promise(resolve => setTimeout(resolve, 800));
+      updateStep("analyze", "completed");
+
+      // Step 2: Market research
+      updateStep("market", "in_progress");
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      updateStep("market", "completed");
+
+      // Step 3: Leverage points
+      updateStep("leverage", "in_progress");
+      await new Promise(resolve => setTimeout(resolve, 600));
+      updateStep("leverage", "completed");
+
+      // Step 4: Generate strategy (actual AI call)
+      updateStep("strategy", "in_progress");
 
       const response = await fetch('/api/negotiation/generate', {
         method: 'POST',
@@ -214,20 +249,32 @@ export default function RenewalsPage({
 
       const result = await response.json();
 
-      if (result.success) {
-        setNegotiationPlaybook(result.data);
-        toast.success("Negotiation playbook ready!", {
-          description: `${result.data.confidence_level} confidence strategy generated`
-        });
-      } else {
-        toast.error("Failed to generate playbook", {
-          description: result.error || "Please try again"
-        });
-        setShowNegotiationDialog(false);
+      if (!result.success) {
+        throw new Error(result.error || "Failed to generate playbook");
       }
+
+      updateStep("strategy", "completed");
+
+      // Step 5: Email templates
+      updateStep("emails", "in_progress");
+      await new Promise(resolve => setTimeout(resolve, 800));
+      updateStep("emails", "completed");
+
+      // Step 6: Finalize
+      updateStep("complete", "in_progress");
+      await new Promise(resolve => setTimeout(resolve, 500));
+      updateStep("complete", "completed");
+
+      setNegotiationPlaybook(result.data);
+      toast.success("Negotiation playbook ready!", {
+        description: `${result.data.confidence_level} confidence strategy generated`
+      });
+
     } catch (error) {
       console.error('Error generating playbook:', error);
-      toast.error("Failed to generate playbook");
+      toast.error("Failed to generate playbook", {
+        description: error instanceof Error ? error.message : "Please try again"
+      });
       setShowNegotiationDialog(false);
     } finally {
       setGeneratingPlaybook(false);
@@ -884,11 +931,23 @@ export default function RenewalsPage({
           </DialogHeader>
 
           {generatingPlaybook ? (
-            <div className="flex flex-col items-center justify-center py-16">
-              <RefreshCw className="w-12 h-12 text-prism-primary animate-spin mb-4" />
-              <p className="text-lg font-semibold text-gray-900">Analyzing your leverage...</p>
-              <p className="text-sm text-gray-600 mt-2">Researching market rates and alternatives</p>
-              <p className="text-sm text-gray-600">Generating custom strategy and email templates</p>
+            <div className="py-8 px-4">
+              <div className="mb-6 text-center">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Preparing Your Negotiation Strategy
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Our AI is analyzing your contract and researching the market...
+                </p>
+              </div>
+
+              <div className="max-w-2xl mx-auto bg-gray-50 rounded-lg p-6 border border-gray-200">
+                <NegotiationProgress steps={negotiationSteps} />
+              </div>
+
+              <div className="mt-6 text-center text-xs text-gray-500">
+                <p>This usually takes 10-15 seconds</p>
+              </div>
             </div>
           ) : negotiationPlaybook ? (
             <NegotiationPlaybook

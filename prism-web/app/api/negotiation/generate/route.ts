@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ Playbook generated with ${playbook.confidence_level} confidence`);
 
-    // Save playbook to database
+    // Save playbook to database (ensure integer fields are rounded)
     const savedPlaybook = await sql`
       INSERT INTO negotiation_playbooks (
         company_id,
@@ -127,16 +127,16 @@ export async function POST(request: NextRequest) {
         ${software.company_id},
         ${softwareId},
         ${playbook.market_average_price},
-        ${playbook.market_discount_range_min},
-        ${playbook.market_discount_range_max},
+        ${Math.round(playbook.market_discount_range_min)},
+        ${Math.round(playbook.market_discount_range_max)},
         ${JSON.stringify(playbook.competitor_alternatives)},
         ${playbook.pricing_trends},
         ${playbook.utilization_rate},
-        ${playbook.unused_licenses},
-        ${playbook.contract_length_years},
+        ${Math.round(playbook.unused_licenses)},
+        ${Math.round(playbook.contract_length_years)},
         ${playbook.total_spent_to_date},
-        ${playbook.payment_history_score},
-        ${playbook.recommended_target_discount},
+        ${Math.round(playbook.payment_history_score)},
+        ${Math.round(playbook.recommended_target_discount)},
         ${playbook.confidence_level},
         ${JSON.stringify(playbook.leverage_points)},
         ${JSON.stringify(playbook.risks)},
