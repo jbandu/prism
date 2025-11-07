@@ -36,7 +36,7 @@ jobs:
       - name: Run smoke tests against production
         working-directory: prism-web
         env:
-          PLAYWRIGHT_TEST_BASE_URL: https://prism-eta-eight.vercel.app
+          PLAYWRIGHT_TEST_BASE_URL: https://prism-hazel.vercel.app
           CI: true
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: npm run test:smoke
