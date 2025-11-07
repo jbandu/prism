@@ -260,7 +260,7 @@ function getAlternatives(category: string, currentSoftware: string) {
 }
 
 /**
- * Generate email templates
+ * Generate email templates with rich data
  */
 function generateEmailTemplate(
   type: 'initial' | 'counter' | 'final' | 'alternative',
@@ -268,85 +268,249 @@ function generateEmailTemplate(
   targetDiscount: number,
   alternatives: any[]
 ): string {
+  // Calculate key metrics
+  const unused_licenses = data.license_count - data.active_users;
+  const waste_cost = (unused_licenses / data.license_count) * data.annual_cost;
+  const annual_cost_per_license = data.annual_cost / data.license_count;
+  const target_cost = data.annual_cost * (1 - targetDiscount/100);
+  const potential_savings = data.annual_cost - target_cost;
+  const right_sized_cost = data.active_users * annual_cost_per_license;
+
+  // Calculate dates
+  const renewalDate = new Date(data.renewal_date);
+  const daysToRenewal = Math.ceil((renewalDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  const responseDeadline = new Date();
+  responseDeadline.setDate(responseDeadline.getDate() + 5);
+  const formattedDeadline = responseDeadline.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
   const templates = {
-    initial: `Subject: ${data.software_name} Contract Renewal Discussion
+    initial: `Subject: ${data.software_name} Renewal Strategy Discussion - Contract Analysis & Optimization
 
 Hi [Account Manager Name],
 
-I hope this email finds you well. As our ${data.software_name} contract approaches renewal on ${data.renewal_date}, I wanted to reach out to discuss our partnership.
+I hope this message finds you well. As we approach our ${data.software_name} contract renewal on ${renewalDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} (${daysToRenewal} days), I wanted to initiate a strategic discussion about our partnership.
 
-Over the past ${data.contract_length_years} year${data.contract_length_years > 1 ? 's' : ''}, we've invested $${data.total_spent_to_date.toLocaleString()} in ${data.vendor_name}, and we value the platform. However, as we optimize our software portfolio, I've identified some concerns:
+**Our Partnership Track Record:**
+Over the past ${data.contract_length_years} year${data.contract_length_years > 1 ? 's' : ''}, we've invested $${data.total_spent_to_date.toLocaleString()} with ${data.vendor_name}. We've maintained ${data.payment_history} payment history and have been a reliable, long-term customer. We genuinely value the platform and the relationship we've built with your team.
 
-• We're currently utilizing ${data.utilization_rate}% of our ${data.license_count} licenses
-• ${data.license_count - data.active_users} unused licenses represent significant waste
-• We're exploring alternatives that offer similar capabilities at 20-30% lower cost
+**Current Utilization Analysis:**
+However, our recent usage audit has revealed some significant optimization opportunities:
 
-I'd like to schedule a call to discuss:
-1. Right-sizing our license count to match actual usage
-2. Exploring pricing options that better align with our budget
-3. Understanding what loyalty discounts are available for long-term customers
+📊 **License Utilization:**
+• Total Licenses: ${data.license_count}
+• Active Users: ${data.active_users}
+• Utilization Rate: ${data.utilization_rate.toFixed(1)}%
+• Unused Licenses: ${unused_licenses} seats
+• Annual Waste: $${waste_cost.toLocaleString()} (~${((waste_cost/data.annual_cost)*100).toFixed(1)}% of total spend)
 
-Are you available this week for a 30-minute call?
+💰 **Cost Analysis:**
+• Current Annual Cost: $${data.annual_cost.toLocaleString()}
+• Cost per License: $${annual_cost_per_license.toLocaleString()}
+• Right-Sized Cost (${data.active_users} licenses): $${right_sized_cost.toLocaleString()}
+• Potential Immediate Savings: $${(data.annual_cost - right_sized_cost).toLocaleString()}/year
+
+**Market Context:**
+In parallel, we're conducting due diligence on alternative solutions as part of our procurement process:
+• ${alternatives[0].name}: ${alternatives[0].price_comparison} with ${alternatives[0].features_comparison}
+• ${alternatives[1]?.name}: ${alternatives[1]?.price_comparison}
+• Industry benchmarks suggest ${data.category} tools typically offer 15-30% renewal discounts for multi-year commitments
+
+**What We'd Like to Discuss:**
+
+1. **License Optimization:** Right-sizing from ${data.license_count} to ${data.active_users} active licenses
+2. **Loyalty Pricing:** ${targetDiscount}% discount reflecting our ${data.contract_length_years}-year partnership and strong payment history
+3. **Multi-Year Commitment:** We're open to a 2-3 year contract for better pricing
+4. **Value-Add:** Any additional features, support tiers, or services you can include at no extra cost
+
+**Proposed Target:**
+$${target_cost.toLocaleString()}/year for ${data.active_users} licenses (${targetDiscount}% discount)
+This represents fair value while maintaining our partnership.
+
+Could we schedule a 45-minute call this week to discuss? I'd like to finalize this by ${formattedDeadline} to align with our fiscal planning.
+
+Looking forward to a mutually beneficial outcome.
 
 Best regards,
-[Your Name]`,
+[Your Name]
+[Your Title]
+[Your Company]`,
 
-    counter: `Subject: Re: ${data.software_name} Renewal Proposal
-
-Hi [Account Manager Name],
-
-Thank you for the renewal proposal. I appreciate you taking the time to prepare this.
-
-However, the proposed pricing of $${data.annual_cost.toLocaleString()}/year doesn't align with our current budget constraints. Based on our analysis and competitive benchmarking, we need a ${targetDiscount}% reduction to move forward with renewal.
-
-Here's our rationale:
-• Current utilization is only ${data.utilization_rate}% - we're significantly over-licensed
-• Market research shows ${alternatives[0].name} offers similar features at ${alternatives[0].price_comparison}
-• Our ${data.contract_length_years}-year partnership warrants loyalty pricing
-
-We're prepared to commit to a multi-year contract at $${(data.annual_cost * (1 - targetDiscount/100)).toLocaleString()}/year with right-sized licensing.
-
-Can you review this with your team and get back to me by [date]?
-
-Thanks,
-[Your Name]`,
-
-    final: `Subject: Final Decision on ${data.software_name} Renewal
+    counter: `Subject: Re: ${data.software_name} Renewal Proposal - Counter-Proposal with Data
 
 Hi [Account Manager Name],
 
-I wanted to follow up on our contract discussion as we're approaching our decision deadline.
+Thank you for the renewal proposal. I've reviewed it carefully with our finance team, and while we appreciate your time on this, the proposed pricing doesn't align with our budget constraints and market benchmarks.
 
-To be direct: we need a ${targetDiscount}% discount to $${(data.annual_cost * (1 - targetDiscount/100)).toLocaleString()}/year to proceed with renewal. Without this adjustment, we'll need to move forward with [Alternative name] starting [date].
+**Your Proposal:** $${data.annual_cost.toLocaleString()}/year
+**Our Counter-Proposal:** $${target_cost.toLocaleString()}/year (${targetDiscount}% reduction)
+**Rationale & Supporting Data:**
 
-I genuinely want to continue our partnership - you've been a great partner. But I have budget constraints I must work within.
+**1. Utilization Inefficiency (Strong Leverage):**
+• We're paying for ${data.license_count} licenses but only using ${data.active_users} (${data.utilization_rate.toFixed(1)}%)
+• This represents $${waste_cost.toLocaleString()}/year in wasted spend
+• We're essentially subsidizing ${unused_licenses} unused seats
+• Right-sizing alone would save us $${(data.annual_cost - right_sized_cost).toLocaleString()}/year
 
-Can you make this work? I need confirmation by end of day [date] to avoid triggering our migration timeline.
+**2. Competitive Landscape (Market Context):**
+We've completed detailed evaluations of alternatives:
 
-Looking forward to your response.
+${alternatives.map((alt, i) =>
+  `• **${alt.name}:**
+   - Pricing: ${alt.price_comparison}
+   - Features: ${alt.features_comparison}
+   - Migration Timeline: ${i === 0 ? '60-90 days' : '90-120 days'}
+   - Annual Savings: ~$${((data.annual_cost * 0.25) + (i * 5000)).toLocaleString()}`
+).join('\n\n')}
 
-Best,
-[Your Name]`,
+**3. Customer Value (Loyalty Argument):**
+• ${data.contract_length_years}-year partnership worth $${data.total_spent_to_date.toLocaleString()}
+• ${data.payment_history.charAt(0).toUpperCase() + data.payment_history.slice(1)} payment history - never missed a payment
+• Minimal support tickets and low customer acquisition cost for you
+• Strong reference customer and case study participant
 
-    alternative: `Subject: Exploring Alternatives to ${data.software_name}
+**4. Budget Reality:**
+Our software budget has been reduced by 18% this fiscal year. We need to demonstrate cost optimization across our entire stack. The CFO is reviewing every contract over $${(data.annual_cost * 0.5).toLocaleString()}.
+
+**Our Commitment:**
+In exchange for ${targetDiscount}% discount to $${target_cost.toLocaleString()}/year:
+✅ 3-year contract commitment (guaranteed $${(target_cost * 3).toLocaleString()} revenue)
+✅ Right-size to ${data.active_users} licenses immediately (cleaner metrics for you)
+✅ Quarterly business reviews to optimize value
+✅ Willing to be a reference customer and participate in case studies
+✅ Open to annual escalator of 3-5% after year one
+
+**Decision Timeline:**
+I need your response by ${formattedDeadline}. After that date, I'll need to trigger our procurement process for alternatives, which will be difficult to reverse.
+
+Can you escalate this to your regional VP or pricing committee? I'm confident we can find a win-win solution.
+
+Best regards,
+[Your Name]
+[Your Title]
+Direct: [Your Phone]`,
+
+    final: `Subject: Final Decision Required - ${data.software_name} Renewal by ${formattedDeadline}
 
 Hi [Account Manager Name],
 
-Following our discussions, I wanted to be transparent: we're actively evaluating ${alternatives[0].name} and ${alternatives[1]?.name || 'other alternatives'}.
+I'm reaching out one last time regarding our ${data.software_name} renewal, as we've reached a critical decision point.
 
-Here's what we're seeing:
-• ${alternatives[0].name}: ${alternatives[0].price_comparison} (${alternatives[0].features_comparison})
-• ${alternatives[1]?.name || 'Alternative B'}: ${alternatives[1]?.price_comparison || '30-40% lower cost'}
-• Migration timeline: 60-90 days
+**Current Situation:**
+• Contract Expiration: ${renewalDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} (${daysToRenewal} days)
+• Your Last Offer: $${data.annual_cost.toLocaleString()}/year
+• Our Target: $${target_cost.toLocaleString()}/year (${targetDiscount}% discount)
+• Gap: $${potential_savings.toLocaleString()}/year
 
-We prefer to stay with ${data.vendor_name} given our ${data.contract_length_years}-year relationship, but the cost difference is substantial ($${(data.annual_cost * 0.25).toLocaleString()}+ annually).
+**Why This Matters:**
+I've been asked by our CFO to make a final decision by **end of day ${formattedDeadline}**. Beyond that date, we will:
+1. Execute our contract with ${alternatives[0].name} ($${((data.annual_cost * 0.75)).toLocaleString()}/year)
+2. Begin 60-day migration timeline
+3. Reallocate your budget to other strategic initiatives
 
-Is there any flexibility to match competitive pricing? Even a ${targetDiscount}% discount would make staying significantly easier to justify.
+**The Business Case You're Competing Against:**
 
-This is urgent - we need to make a decision by [date].
+**Option A: Renew with ${data.vendor_name} at $${target_cost.toLocaleString()}/year**
+• 3-year commitment: $${(target_cost * 3).toLocaleString()}
+• Minimal disruption
+• Proven solution
+• Our preferred option
 
-Thanks,
-[Your Name]`
+**Option B: Switch to ${alternatives[0].name}**
+• Year 1 Cost: $${((data.annual_cost * 0.75)).toLocaleString()} (${alternatives[0].price_comparison})
+• 3-year savings: ~$${(potential_savings * 3).toLocaleString()}
+• Migration cost: ~$${(data.annual_cost * 0.15).toLocaleString()} (one-time)
+• Net 3-year savings: $${((potential_savings * 3) - (data.annual_cost * 0.15)).toLocaleString()}
+
+**What I Need from You:**
+A commitment to $${target_cost.toLocaleString()}/year by **${formattedDeadline} at 5pm EST**.
+
+**My Commitment:**
+If you can meet this price, I will:
+• Execute a 3-year contract this week
+• Provide a written testimonial
+• Participate in a joint success story/case study
+• Refer you to 2-3 other companies in our network
+
+**Final Thought:**
+I've genuinely enjoyed working with you and your team. ${data.vendor_name} has been a solid partner. I'm hoping we can make this work, but I need you to understand my constraints are real.
+
+After ${formattedDeadline}, this window closes. The procurement wheels will start turning, and it will be very difficult to reverse.
+
+Can you make this happen? I'm available for a call today or tomorrow if that helps.
+
+Best regards,
+[Your Name]
+[Your Title]
+Direct: [Your Phone]
+Mobile: [Your Cell]`,
+
+    alternative: `Subject: Competitive Evaluation Update - ${data.software_name} vs. Alternatives
+
+Hi [Account Manager Name],
+
+I wanted to give you a transparent update on where we are in our evaluation process, as I believe it's important for our partnership that you understand the competitive pressure we're facing.
+
+**Current Evaluation Status:**
+We've completed POCs with ${alternatives[0].name} and ${alternatives[1]?.name || 'two other alternatives'}, and I need to be honest with you about what we're seeing.
+
+**Detailed Competitive Analysis:**
+
+**${alternatives[0].name}:**
+• **Pricing:** ${alternatives[0].price_comparison} ($${((data.annual_cost * 0.75)).toLocaleString()}/year vs. your $${data.annual_cost.toLocaleString()}/year)
+• **Annual Savings:** $${((data.annual_cost * 0.25)).toLocaleString()}/year
+• **3-Year Savings:** $${((data.annual_cost * 0.25) * 3).toLocaleString()}
+• **Features:** ${alternatives[0].features_comparison}
+• **Team Feedback:** 8/10 from end users in POC
+• **Migration Effort:** Medium (60-90 days estimated)
+• **Risk:** Low - proven platform with strong reviews
+
+${alternatives[1] ? `**${alternatives[1].name}:**
+• **Pricing:** ${alternatives[1].price_comparison}
+• **Features:** ${alternatives[1].features_comparison}
+• **Team Feedback:** 7/10 from end users
+• **Migration Effort:** Medium-High (90-120 days)
+` : ''}
+
+**Cost Breakdown Comparison:**
+Current ${data.software_name} spend:
+• Annual: $${data.annual_cost.toLocaleString()}
+• Per License: $${annual_cost_per_license.toLocaleString()}
+• Waste (${unused_licenses} unused): $${waste_cost.toLocaleString()}/year
+• Utilization: ${data.utilization_rate.toFixed(1)}%
+
+${alternatives[0].name} projected spend:
+• Annual: $${((data.annual_cost * 0.75)).toLocaleString()}
+• Per License: $${((annual_cost_per_license * 0.75)).toLocaleString()}
+• Right-sized from day 1: ${data.active_users} licenses
+• Utilization: ~95%
+
+**What This Means:**
+The cost difference over 3 years is approximately **$${((potential_savings * 3)).toLocaleString()}**. That's significant budget that could be reallocated to other strategic initiatives.
+
+**Why I'm Telling You This:**
+Despite these numbers, we'd **prefer to stay with ${data.vendor_name}** because:
+• ${data.contract_length_years}-year relationship and familiarity
+• Migration always carries risk and disruption
+• Your team has been responsive and supportive
+• Integration with our existing workflows
+
+**What Would Make Us Stay:**
+If you could match or come close to competitive pricing at **$${target_cost.toLocaleString()}/year** (${targetDiscount}% discount), we would strongly prefer to renew rather than migrate.
+
+**The Ask:**
+Can you escalate this to your leadership team? I need an answer by ${formattedDeadline}. After that, I'll need to present my recommendation to our executive team, and the momentum will shift toward migration.
+
+I'm hoping we can find a creative solution that works for both of us. Our ${data.contract_length_years}-year partnership is worth preserving if we can bridge this gap.
+
+Available for a call anytime this week.
+
+Best regards,
+[Your Name]
+[Your Title]
+Email: [Your Email]
+Direct: [Your Phone]
+
+P.S. - Our CFO specifically asked me to document the cost-benefit analysis. I'd much rather fill that report with reasons we're staying with ${data.vendor_name} than reasons we're switching. Help me make that case.`
   };
 
   return templates[type];
