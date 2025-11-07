@@ -74,7 +74,12 @@ export function OfficePopup({ office, weather, tempUnit = "F" }: OfficePopupProp
     return `https://openweathermap.org/img/wn/${icon}@2x.png`;
   };
 
-  const temperature = tempUnit === "F" ? weather?.temp : weather?.temp_celsius;
+  const temperature = tempUnit === "F"
+    ? (weather?.temp ?? 70)
+    : (weather?.temp_celsius ?? 21);
+
+  const feelsLike = weather?.feels_like ?? 70;
+  const feelsLikeCelsius = Math.round((feelsLike - 32) * (5 / 9));
 
   return (
     <div className="min-w-[320px] max-w-[380px]">
@@ -140,17 +145,19 @@ export function OfficePopup({ office, weather, tempUnit = "F" }: OfficePopupProp
         <div className="bg-gradient-to-br from-sky-50 to-sky-100 rounded-lg p-3 border border-sky-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img
-                src={getWeatherIcon(weather.icon)}
-                alt={weather.description}
-                className="w-16 h-16"
-              />
+              {weather.icon && (
+                <img
+                  src={getWeatherIcon(weather.icon)}
+                  alt={weather.description || "Weather"}
+                  className="w-16 h-16"
+                />
+              )}
               <div>
                 <div className="text-3xl font-bold text-sky-900">
                   {temperature}°{tempUnit}
                 </div>
                 <div className="text-sm text-sky-700 capitalize">
-                  {weather.description}
+                  {weather.description || "Current conditions"}
                 </div>
               </div>
             </div>
@@ -164,7 +171,7 @@ export function OfficePopup({ office, weather, tempUnit = "F" }: OfficePopupProp
               </div>
               <div className="text-xs text-sky-600 mb-0.5">Feels Like</div>
               <div className="text-sm font-semibold text-sky-900">
-                {tempUnit === "F" ? weather.feels_like : Math.round((weather.feels_like - 32) * (5 / 9))}°
+                {tempUnit === "F" ? feelsLike : feelsLikeCelsius}°
               </div>
             </div>
 
@@ -174,7 +181,7 @@ export function OfficePopup({ office, weather, tempUnit = "F" }: OfficePopupProp
               </div>
               <div className="text-xs text-sky-600 mb-0.5">Humidity</div>
               <div className="text-sm font-semibold text-sky-900">
-                {weather.humidity}%
+                {weather?.humidity ?? 50}%
               </div>
             </div>
 
@@ -184,7 +191,7 @@ export function OfficePopup({ office, weather, tempUnit = "F" }: OfficePopupProp
               </div>
               <div className="text-xs text-sky-600 mb-0.5">Wind</div>
               <div className="text-sm font-semibold text-sky-900">
-                {weather.wind_speed} mph
+                {weather?.wind_speed ?? 0} mph
               </div>
             </div>
           </div>
