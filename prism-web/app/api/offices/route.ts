@@ -33,13 +33,34 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const companyId = searchParams.get("companyId");
+    let companyIdParam = searchParams.get("companyId");
 
-    if (!companyId) {
+    if (!companyIdParam) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Company ID is required" },
         { status: 400 }
       );
+    }
+
+    // Check if it's a slug or UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    let companyId = companyIdParam;
+
+    // If it's a slug, resolve to UUID
+    if (!uuidRegex.test(companyIdParam)) {
+      const companyResult = await sql`
+        SELECT id FROM companies WHERE slug = ${companyIdParam}
+      `;
+
+      if (companyResult.length === 0) {
+        return NextResponse.json<ApiResponse>(
+          { success: false, error: "Company not found" },
+          { status: 404 }
+        );
+      }
+
+      companyId = companyResult[0].id;
     }
 
     // Verify user has access to this company
