@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     const softwareResult = await sql`
       SELECT
         s.*,
-        c.name as company_name
+        c.company_name
       FROM software s
       LEFT JOIN companies c ON s.company_id = c.id
       WHERE s.id = ${softwareId}
