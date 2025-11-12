@@ -14,5 +14,11 @@
       "src": "/(.*)",
       "dest": "prism-web/$1"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/enhance",
+      "schedule": "0 2 * * 1"
+    }
   ]
 }
