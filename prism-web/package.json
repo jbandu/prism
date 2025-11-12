@@ -10,6 +10,8 @@
     "migrate:all": "tsx scripts/run-migrations-direct.ts",
     "migrate:print": "bash scripts/print-migrations.sh",
     "migrate:redundancy": "tsx scripts/run-migration.ts",
+    "seed:software-catalog": "tsx scripts/seed-software-catalog.ts",
+    "seed:expanded-catalog": "tsx scripts/seed-expanded-catalog.ts",
     "test:seed": "tsx e2e/fixtures/seed-test-data.ts",
     "test:cleanup": "tsx e2e/fixtures/seed-test-data.ts cleanup",
     "test:smoke": "playwright test e2e/smoke.spec.ts",
