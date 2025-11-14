@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Map as MapGL, Marker, Popup, NavigationControl, FullscreenControl } from "react-map-gl";
+import Map, { Marker, Popup, NavigationControl, FullscreenControl } from "react-map-gl/maplibre";
 import { MapPin, List, Map as MapIcon, Thermometer } from "lucide-react";
 import { OfficePopup } from "./OfficePopup";
 import { OfficeListSidebar } from "./OfficeListSidebar";
@@ -191,7 +191,7 @@ export function OfficeMap({ offices, companyId }: OfficeMapProps) {
 
       {/* Map */}
       <div className="relative w-full h-[calc(100vh-200px)] rounded-xl overflow-hidden shadow-2xl border border-gray-200">
-        <MapGL
+        <Map
           ref={mapRef}
           {...viewState}
           onMove={(evt) => setViewState(evt.viewState)}
@@ -268,7 +268,7 @@ export function OfficeMap({ offices, companyId }: OfficeMapProps) {
               />
             </Popup>
           )}
-        </MapGL>
+        </Map>
 
         {/* Loading indicator for weather */}
         {loadingWeather && (
