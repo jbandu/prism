@@ -50,7 +50,7 @@ export function OfficeMap({ offices, companyId }: OfficeMapProps) {
 
   const [selectedOffice, setSelectedOffice] = useState<Office | null>(null);
   const [weatherData, setWeatherData] = useState<Map<string, WeatherData>>(
-    new Map()
+    new Map<string, WeatherData>()
   );
   const [tempUnit, setTempUnit] = useState<"F" | "C">("F");
   const [showList, setShowList] = useState(true);
