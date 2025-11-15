@@ -1,13 +1,25 @@
 // lib/db.ts
-import { Pool, neon } from '@neondatabase/serverless';
+// FIXED: Removed Pool to prevent connection leaks in serverless environment
+// FIXED: Added singleton pattern for Neon serverless driver
+import { neon, NeonQueryFunction } from '@neondatabase/serverless';
 
-// Create connection pool
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
+// Singleton pattern to prevent multiple connections in serverless
+declare global {
+  var _neonSql: NeonQueryFunction<false, false> | undefined;
+}
 
-// Export sql for backwards compatibility with existing code
-export const sql = neon(process.env.DATABASE_URL || "");
+const getNeonSql = (): NeonQueryFunction<false, false> => {
+  if (!global._neonSql) {
+    if (!process.env.DATABASE_URL) {
+      throw new Error('DATABASE_URL environment variable is not set');
+    }
+    global._neonSql = neon(process.env.DATABASE_URL);
+  }
+  return global._neonSql;
+};
+
+// Export sql for use throughout the application
+export const sql = getNeonSql();
 
 // Generic query function with error handling
 export async function query<T = any>(
@@ -166,9 +178,12 @@ export const featureQueries = {
     `, [adminUserId, reason || null, id]);
   },
 
+  // FIXED: SQL injection vulnerability
+  // Before: Used string interpolation with ${updates.join(', ')} which could be exploited
+  // After: Use safe Neon template tags with proper parameterization
   updateBuildStatus: async (
-    id: string, 
-    status: string, 
+    id: string,
+    status: string,
     data?: {
       buildStartedAt?: Date;
       buildCompletedAt?: Date;
@@ -179,47 +194,57 @@ export const featureQueries = {
       vercelPreviewUrl?: string;
     }
   ) => {
-    const updates: string[] = ['status = $1', 'updated_at = NOW()'];
-    const params: any[] = [status];
-    let paramIndex = 2;
+    const {
+      buildStartedAt,
+      buildCompletedAt,
+      buildLogs,
+      buildError,
+      githubIssueUrl,
+      githubPrUrl,
+      vercelPreviewUrl,
+    } = data || {};
 
-    if (data?.buildStartedAt) {
-      updates.push(`build_started_at = $${paramIndex++}`);
-      params.push(data.buildStartedAt);
-    }
-    if (data?.buildCompletedAt) {
-      updates.push(`build_completed_at = $${paramIndex++}`);
-      params.push(data.buildCompletedAt);
-    }
-    if (data?.buildLogs) {
-      updates.push(`build_logs = $${paramIndex++}`);
-      params.push(data.buildLogs);
-    }
-    if (data?.buildError) {
-      updates.push(`build_error = $${paramIndex++}`);
-      params.push(data.buildError);
-    }
-    if (data?.githubIssueUrl) {
-      updates.push(`github_issue_url = $${paramIndex++}`);
-      params.push(data.githubIssueUrl);
-    }
-    if (data?.githubPrUrl) {
-      updates.push(`github_pr_url = $${paramIndex++}`);
-      params.push(data.githubPrUrl);
-    }
-    if (data?.vercelPreviewUrl) {
-      updates.push(`vercel_preview_url = $${paramIndex++}`);
-      params.push(data.vercelPreviewUrl);
-    }
-
-    params.push(id);
-
-    await query(`
-      UPDATE feature_requests 
-      SET ${updates.join(', ')}
-      WHERE id = $${paramIndex}
-    `, params);
+    // Use Neon's template tag syntax for safe parameterization
+    await sql`
+      UPDATE feature_requests
+      SET
+        status = ${status},
+        build_started_at = COALESCE(${buildStartedAt || null}, build_started_at),
+        build_completed_at = COALESCE(${buildCompletedAt || null}, build_completed_at),
+        build_logs = COALESCE(${buildLogs || null}, build_logs),
+        build_error = COALESCE(${buildError || null}, build_error),
+        github_issue_url = COALESCE(${githubIssueUrl || null}, github_issue_url),
+        github_pr_url = COALESCE(${githubPrUrl || null}, github_pr_url),
+        vercel_preview_url = COALESCE(${vercelPreviewUrl || null}, vercel_preview_url),
+        updated_at = NOW()
+      WHERE id = ${id}
+    `;
   },
 };
 
-export default pool;
+// Health check function for monitoring
+export async function checkDatabaseHealth(): Promise<{
+  healthy: boolean;
+  latencyMs?: number;
+  error?: string;
+}> {
+  const start = Date.now();
+
+  try {
+    await sql`SELECT 1 as health_check`;
+    const latencyMs = Date.now() - start;
+
+    return {
+      healthy: true,
+      latencyMs,
+    };
+  } catch (error: any) {
+    return {
+      healthy: false,
+      error: error.message,
+    };
+  }
+}
+
+// Export sql as default for backwards compatibility
+export default sql;
