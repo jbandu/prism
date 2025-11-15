@@ -38,7 +38,8 @@ interface OfficeMapProps {
   companyId: string;
 }
 
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
+// MapLibre doesn't require a Mapbox token - we use free OSM styles
+const MAP_STYLE = "https://demotiles.maplibre.org/style.json";
 
 export function OfficeMap({ offices, companyId }: OfficeMapProps) {
   const mapRef = useRef<any>(null);
@@ -134,34 +135,7 @@ export function OfficeMap({ offices, companyId }: OfficeMapProps) {
     `;
   };
 
-  if (!MAPBOX_TOKEN) {
-    return (
-      <div className="flex items-center justify-center h-[calc(100vh-200px)] bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border-2 border-dashed border-gray-300">
-        <div className="text-center p-8 max-w-2xl">
-          <MapIcon className="w-20 h-20 mx-auto mb-4 text-blue-400" />
-          <h3 className="text-2xl font-semibold text-gray-900 mb-3">
-            Map Configuration Required
-          </h3>
-          <p className="text-gray-600 mb-4">
-            To display the interactive office map, you need to configure a Mapbox access token.
-          </p>
-          <div className="bg-white rounded-lg p-4 mb-4 text-left border border-gray-200">
-            <h4 className="font-semibold text-sm text-gray-900 mb-2">Setup Instructions:</h4>
-            <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
-              <li>Visit <a href="https://account.mapbox.com/access-tokens/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Mapbox Access Tokens</a></li>
-              <li>Create a free account or sign in</li>
-              <li>Copy your default public token</li>
-              <li>Add it to your environment variables as <code className="bg-gray-100 px-1 rounded">NEXT_PUBLIC_MAPBOX_TOKEN</code></li>
-              <li>Restart your development server</li>
-            </ol>
-          </div>
-          <p className="text-sm text-gray-500">
-            You have {offices.length} office location{offices.length !== 1 ? "s" : ""} ready to display once configured.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // MapLibre works without tokens - no need for token check
 
   return (
     <div className="relative">
@@ -207,8 +181,7 @@ export function OfficeMap({ offices, companyId }: OfficeMapProps) {
           ref={mapRef}
           {...viewState}
           onMove={(evt) => setViewState(evt.viewState)}
-          mapStyle="mapbox://styles/mapbox/dark-v11"
-          mapboxAccessToken={MAPBOX_TOKEN}
+          mapStyle={MAP_STYLE}
           style={{ width: "100%", height: "100%" }}
           attributionControl={false}
         >
@@ -292,7 +265,7 @@ export function OfficeMap({ offices, companyId }: OfficeMapProps) {
 
         {/* Attribution */}
         <div className="absolute bottom-2 left-2 text-xs text-gray-400 bg-black/50 px-2 py-1 rounded">
-          © Mapbox © OpenStreetMap
+          © MapLibre © OpenStreetMap
         </div>
       </div>
 
