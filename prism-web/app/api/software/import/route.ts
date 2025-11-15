@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
 
         // Insert or update software
         await sql`
-          INSERT INTO software_assets (
+          INSERT INTO software (
             company_id,
             software_name,
             vendor_name,

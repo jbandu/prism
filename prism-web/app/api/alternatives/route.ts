@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
           sw.vendor_name as original_vendor_name,
           sw.total_annual_cost as original_annual_cost
         FROM alternative_solutions alt
-        JOIN software_assets sw ON alt.original_software_id = sw.id
+        JOIN software sw ON alt.original_software_id = sw.id
         WHERE alt.original_software_id = ${softwareId}
         AND sw.company_id = ${companyId}
         ORDER BY alt.cost_savings_percentage DESC
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
           sw.vendor_name as original_vendor_name,
           sw.total_annual_cost as original_annual_cost
         FROM alternative_solutions alt
-        JOIN software_assets sw ON alt.original_software_id = sw.id
+        JOIN software sw ON alt.original_software_id = sw.id
         WHERE sw.company_id = ${companyId}
         ORDER BY alt.three_year_total_savings DESC NULLS LAST,
                  alt.cost_savings_percentage DESC

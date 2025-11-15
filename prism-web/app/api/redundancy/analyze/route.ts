@@ -67,14 +67,14 @@ export async function POST(request: Request) {
     const softwareCountQuery = selectedSoftwareIds && selectedSoftwareIds.length > 0
       ? sql`
           SELECT COUNT(*) as count
-          FROM software_assets
+          FROM software
           WHERE company_id = ${resolvedCompanyId}
           AND contract_status = 'active'
           AND id = ANY(${selectedSoftwareIds})
         `
       : sql`
           SELECT COUNT(*) as count
-          FROM software_assets
+          FROM software
           WHERE company_id = ${resolvedCompanyId}
           AND contract_status = 'active'
         `;

@@ -97,8 +97,8 @@ export async function POST(request: NextRequest) {
 async function runCostOptimizationAnalysis(companyId: string, softwareId?: string) {
   // Fetch software data
   const query = softwareId
-    ? sql`SELECT * FROM software_assets WHERE id = ${softwareId} AND company_id = ${companyId}`
-    : sql`SELECT * FROM software_assets WHERE company_id = ${companyId}`;
+    ? sql`SELECT * FROM software WHERE id = ${softwareId} AND company_id = ${companyId}`
+    : sql`SELECT * FROM software WHERE company_id = ${companyId}`;
 
   const software = await query;
 
@@ -161,7 +161,7 @@ async function runCostOptimizationAnalysis(companyId: string, softwareId?: strin
 async function runAlternativeDiscoveryAnalysis(companyId: string, softwareId?: string, requirements?: string) {
   // Fetch the software to find alternatives for
   const software = await sql`
-    SELECT * FROM software_assets
+    SELECT * FROM software
     WHERE ${softwareId ? sql`id = ${softwareId}` : sql`company_id = ${companyId}`}
     LIMIT 1
   `;
@@ -232,7 +232,7 @@ async function runVendorIntelligenceAnalysis(vendorName: string) {
 async function runPortfolioAnalysis(companyId: string) {
   // Fetch all software for the company
   const software = await sql`
-    SELECT * FROM software_assets WHERE company_id = ${companyId}
+    SELECT * FROM software WHERE company_id = ${companyId}
   `;
 
   const totalSpend = software.reduce((sum: number, s: any) => {
