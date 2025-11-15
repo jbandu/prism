@@ -1,113 +1,195 @@
-import { NextAuthOptions } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
-import { compare } from "bcryptjs";
-import { getUserByEmail, updateUserLastLogin, getCompanyById } from "./db-utils";
-import type { User, UserRole } from "@/types";
+// lib/auth.ts
+import { getServerSession, type NextAuthOptions } from 'next-auth';
+import CredentialsProvider from 'next-auth/providers/credentials';
+import { query } from './db';
+import bcrypt from 'bcryptjs';
 
-export interface SessionUser {
+export interface User {
   id: string;
   email: string;
-  name: string;
-  role: UserRole;
-  companyId?: string;
-  companySlug?: string;
+  full_name: string;
+  role: 'admin' | 'client';
+  company_id: string;
+  company_name?: string;
 }
 
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
-      name: "Credentials",
+      name: 'Credentials',
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
+        password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("Invalid credentials");
+          throw new Error('Missing credentials');
         }
 
-        const user = await getUserByEmail(credentials.email);
+        try {
+          // Query user from database
+          const result = await query<User & { password_hash: string }>(`
+            SELECT
+              u.id,
+              u.email,
+              u.full_name,
+              u.role,
+              u.company_id,
+              u.password_hash,
+              c.company_name
+            FROM users u
+            LEFT JOIN companies c ON u.company_id = c.id
+            WHERE u.email = $1
+          `, [credentials.email]);
 
-        if (!user || !user.is_active) {
-          throw new Error("Invalid credentials");
+          const user = result.rows[0];
+
+          if (!user) {
+            throw new Error('Invalid credentials');
+          }
+
+          // Verify password
+          const isValid = await bcrypt.compare(credentials.password, user.password_hash);
+
+          if (!isValid) {
+            throw new Error('Invalid credentials');
+          }
+
+          // Return user object (without password)
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.full_name,
+            role: user.role,
+            company_id: user.company_id,
+            company_name: user.company_name,
+          };
+        } catch (error) {
+          console.error('Auth error:', error);
+          return null;
         }
-
-        const isPasswordValid = await compare(
-          credentials.password,
-          user.password_hash
-        );
-
-        if (!isPasswordValid) {
-          throw new Error("Invalid credentials");
-        }
-
-        // Update last login
-        await updateUserLastLogin(user.id);
-
-        // Get company slug if user has a company
-        let companySlug: string | undefined;
-        if (user.company_id) {
-          const company = await getCompanyById(user.company_id);
-          companySlug = company?.slug;
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.full_name,
-          role: user.role,
-          companyId: user.company_id,
-          companySlug: companySlug,
-        };
-      },
-    }),
+      }
+    })
   ],
+  session: {
+    strategy: 'jwt',
+  },
+  pages: {
+    signIn: '/login',
+    error: '/login',
+  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = (user as any).role;
-        token.companyId = (user as any).companyId;
-        token.companySlug = (user as any).companySlug;
+        token.role = user.role;
+        token.company_id = user.company_id;
+        token.company_name = user.company_name;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).id = token.id;
-        (session.user as any).role = token.role;
-        (session.user as any).companyId = token.companyId;
-        (session.user as any).companySlug = token.companySlug;
+        session.user.id = token.id as string;
+        session.user.role = token.role as string;
+        session.user.company_id = token.company_id as string;
+        session.user.company_name = token.company_name as string;
       }
       return session;
     },
   },
-  pages: {
-    signIn: "/login",
-  },
-  session: {
-    strategy: "jwt",
-  },
   secret: process.env.NEXTAUTH_SECRET,
 };
 
-// Helper to check if user has access to a company
-export function canAccessCompany(user: SessionUser, companyId: string): boolean {
-  // Admins can access any company
-  if (user.role === "admin") {
+// Get current user from session
+export async function getCurrentUser(req: Request): Promise<User | null> {
+  try {
+    const session = await getServerSession();
+    
+    if (!session?.user?.email) {
+      return null;
+    }
+
+    const result = await query<User>(`
+      SELECT 
+        u.id,
+        u.email,
+        u.full_name,
+        u.role,
+        u.company_id,
+        c.company_name
+      FROM users u
+      LEFT JOIN companies c ON u.company_id = c.id
+      WHERE u.email = $1
+    `, [session.user.email]);
+
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('Error getting current user:', error);
+    return null;
+  }
+}
+
+// Require authentication
+export async function requireAuth(req: Request): Promise<User> {
+  const user = await getCurrentUser(req);
+  
+  if (!user) {
+    throw new Error('Unauthorized');
+  }
+  
+  return user;
+}
+
+// Require admin role
+export async function requireAdmin(req: Request): Promise<User> {
+  const user = await requireAuth(req);
+  
+  if (user.role !== 'admin') {
+    throw new Error('Forbidden: Admin access required');
+  }
+  
+  return user;
+}
+
+// Check if user can access feature request
+export async function canAccessFeatureRequest(
+  userId: string,
+  featureId: string
+): Promise<boolean> {
+  const result = await query(`
+    SELECT 1
+    FROM feature_requests fr
+    INNER JOIN users u ON fr.company_id = u.company_id
+    WHERE fr.id = $1 AND u.id = $2
+  `, [featureId, userId]);
+
+  return result.rowCount > 0;
+}
+
+// Check if user is admin
+export function isAdmin(user: any): boolean {
+  return user?.role === 'admin';
+}
+
+// Check if user can access a company
+export function canAccessCompany(user: any, companyId: string): boolean {
+  // Admins can access all companies
+  if (user?.role === 'admin') {
     return true;
   }
 
-  // Company managers and viewers can only access their own company
-  return user.companyId === companyId;
+  // Regular users can only access their own company
+  return user?.company_id === companyId;
 }
 
-// Helper to check if user is admin
-export function isAdmin(user: SessionUser): boolean {
-  return user.role === "admin";
-}
+// Check if user can modify data for a company
+export function canModify(user: any, companyId: string): boolean {
+  // Admins can modify all companies
+  if (user?.role === 'admin') {
+    return true;
+  }
 
-// Helper to check if user can modify resources
-export function canModify(user: SessionUser): boolean {
-  return user.role === "admin" || user.role === "company_manager";
+  // Regular users can only modify their own company's data
+  return user?.company_id === companyId;
 }

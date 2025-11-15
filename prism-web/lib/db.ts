@@ -1,82 +1,222 @@
-import { neon } from "@neondatabase/serverless";
+// lib/db.ts
+import { Pool } from '@neondatabase/serverless';
 
-// Validate DATABASE_URL is present
-if (!process.env.DATABASE_URL) {
-  // During build time, this might not be available, so we'll handle it gracefully
-  if (process.env.NODE_ENV === "production" && process.env.VERCEL_ENV !== "preview") {
-    console.warn("DATABASE_URL is not set. Database operations will fail.");
-  }
-}
+// Create connection pool
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
 
-// Initialize the Neon connection
-// The connection will be created lazily when first used
-export const sql = neon(process.env.DATABASE_URL || "");
-
+// Generic query function with error handling
 export async function query<T = any>(
   text: string,
   params?: any[]
-): Promise<T[]> {
+): Promise<{ rows: T[]; rowCount: number }> {
+  const start = Date.now();
+  
   try {
-    const result = await sql(text, params);
-    return result as T[];
+    const result = await pool.query(text, params);
+    const duration = Date.now() - start;
+    
+    // Log slow queries (>1s)
+    if (duration > 1000) {
+      console.warn('Slow query detected:', {
+        text: text.substring(0, 100),
+        duration: `${duration}ms`,
+      });
+    }
+    
+    return result;
   } catch (error) {
-    console.error("Database query error:", error);
+    console.error('Database query error:', {
+      text: text.substring(0, 100),
+      params,
+      error: error.message,
+    });
     throw error;
   }
 }
 
-export interface Company {
-  company_id: string;
-  company_name: string;
-  industry: string;
-  employee_count: number;
-  created_at: Date;
+// Transaction helper
+export async function transaction<T>(
+  callback: (client: any) => Promise<T>
+): Promise<T> {
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+    const result = await callback(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
-export interface Software {
-  software_id: string;
-  company_id: string;
-  software_name: string;
-  vendor_name: string;
-  category: string;
-  total_annual_cost: number;
-  total_licenses: number;
-  active_users: number;
-  utilization_rate: number;
-  license_type: string;
-  renewal_date: Date;
-  contract_status: string;
-}
+// Typed query helpers for features
+export const featureQueries = {
+  create: async (data: {
+    requestedByUserId: string;
+    companyId: string;
+    initialRequest: string;
+  }) => {
+    const result = await query<{ id: string }>(`
+      INSERT INTO feature_requests (
+        requested_by_user_id,
+        company_id,
+        initial_request,
+        status,
+        chat_history
+      ) VALUES ($1, $2, $3, 'refining', '[]'::jsonb)
+      RETURNING id
+    `, [data.requestedByUserId, data.companyId, data.initialRequest]);
+    
+    return result.rows[0];
+  },
 
-export interface UsageAnalytics {
-  usage_id: string;
-  software_id: string;
-  licenses_purchased: number;
-  licenses_active: number;
-  utilization_percentage: number;
-  daily_active_users: number;
-  monthly_active_users: number;
-  features_used: number;
-  features_available: number;
-  waste_amount: number;
-  usage_trend: string;
-  analysis_date: Date;
-}
+  findById: async (id: string) => {
+    const result = await query(`
+      SELECT 
+        fr.*,
+        u.full_name as requested_by_name,
+        u.email as requested_by_email,
+        c.company_name,
+        admin.full_name as reviewed_by_name
+      FROM feature_requests fr
+      LEFT JOIN users u ON fr.requested_by_user_id = u.id
+      LEFT JOIN companies c ON fr.company_id = c.id
+      LEFT JOIN users admin ON fr.reviewed_by_user_id = admin.id
+      WHERE fr.id = $1
+    `, [id]);
+    
+    return result.rows[0];
+  },
 
-export interface Alternative {
-  alternative_id: string;
-  software_id: string;
-  alternative_name: string;
-  vendor_name: string;
-  category: string;
-  estimated_annual_cost: number;
-  feature_match_score: number;
-  feature_comparison: any;
-  migration_complexity: string;
-  migration_cost: number;
-  potential_savings: number;
-  recommendation_score: number;
-  pros: string[];
-  cons: string[];
-  analysis_date: Date;
-}
+  updateChatHistory: async (id: string, chatHistory: any[]) => {
+    await query(`
+      UPDATE feature_requests 
+      SET 
+        chat_history = $1,
+        updated_at = NOW()
+      WHERE id = $2
+    `, [JSON.stringify(chatHistory), id]);
+  },
+
+  finalize: async (id: string, finalRequirements: string) => {
+    await query(`
+      UPDATE feature_requests 
+      SET 
+        final_requirements = $1,
+        requirements_finalized_at = NOW(),
+        status = 'submitted',
+        updated_at = NOW()
+      WHERE id = $2
+    `, [finalRequirements, id]);
+  },
+
+  listPending: async () => {
+    const result = await query(`
+      SELECT 
+        fr.*,
+        u.full_name as requested_by_name,
+        u.email as requested_by_email,
+        c.company_name,
+        (
+          SELECT COUNT(*)::int 
+          FROM feature_votes 
+          WHERE feature_request_id = fr.id AND vote_type = 'upvote'
+        ) as upvotes
+      FROM feature_requests fr
+      LEFT JOIN users u ON fr.requested_by_user_id = u.id
+      LEFT JOIN companies c ON fr.company_id = c.id
+      WHERE fr.status = 'submitted'
+      ORDER BY fr.created_at DESC
+    `);
+    
+    return result.rows;
+  },
+
+  approve: async (id: string, adminUserId: string) => {
+    await query(`
+      UPDATE feature_requests 
+      SET 
+        status = 'approved',
+        reviewed_by_user_id = $1,
+        reviewed_at = NOW(),
+        updated_at = NOW()
+      WHERE id = $2
+    `, [adminUserId, id]);
+  },
+
+  reject: async (id: string, adminUserId: string, reason?: string) => {
+    await query(`
+      UPDATE feature_requests 
+      SET 
+        status = 'rejected',
+        reviewed_by_user_id = $1,
+        reviewed_at = NOW(),
+        admin_notes = $2,
+        updated_at = NOW()
+      WHERE id = $3
+    `, [adminUserId, reason || null, id]);
+  },
+
+  updateBuildStatus: async (
+    id: string, 
+    status: string, 
+    data?: {
+      buildStartedAt?: Date;
+      buildCompletedAt?: Date;
+      buildLogs?: string;
+      buildError?: string;
+      githubIssueUrl?: string;
+      githubPrUrl?: string;
+      vercelPreviewUrl?: string;
+    }
+  ) => {
+    const updates: string[] = ['status = $1', 'updated_at = NOW()'];
+    const params: any[] = [status];
+    let paramIndex = 2;
+
+    if (data?.buildStartedAt) {
+      updates.push(`build_started_at = $${paramIndex++}`);
+      params.push(data.buildStartedAt);
+    }
+    if (data?.buildCompletedAt) {
+      updates.push(`build_completed_at = $${paramIndex++}`);
+      params.push(data.buildCompletedAt);
+    }
+    if (data?.buildLogs) {
+      updates.push(`build_logs = $${paramIndex++}`);
+      params.push(data.buildLogs);
+    }
+    if (data?.buildError) {
+      updates.push(`build_error = $${paramIndex++}`);
+      params.push(data.buildError);
+    }
+    if (data?.githubIssueUrl) {
+      updates.push(`github_issue_url = $${paramIndex++}`);
+      params.push(data.githubIssueUrl);
+    }
+    if (data?.githubPrUrl) {
+      updates.push(`github_pr_url = $${paramIndex++}`);
+      params.push(data.githubPrUrl);
+    }
+    if (data?.vercelPreviewUrl) {
+      updates.push(`vercel_preview_url = $${paramIndex++}`);
+      params.push(data.vercelPreviewUrl);
+    }
+
+    params.push(id);
+
+    await query(`
+      UPDATE feature_requests 
+      SET ${updates.join(', ')}
+      WHERE id = $${paramIndex}
+    `, params);
+  },
+};
+
+export default pool;
