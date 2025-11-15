@@ -33,14 +33,14 @@ export async function POST(request: NextRequest) {
       LIMIT 1
     `;
 
-    if (softwareResult.rows.length === 0) {
+    if (softwareResult.length === 0) {
       return NextResponse.json(
         { error: 'Software not found' },
         { status: 404 }
       );
     }
 
-    const software = softwareResult.rows[0];
+    const software = softwareResult[0];
 
     // Check if we have cached alternatives (less than 30 days old)
     const cachedAlternatives = await sql`
@@ -54,11 +54,11 @@ export async function POST(request: NextRequest) {
 
     let alternatives: AlternativeMatch[];
 
-    if (cachedAlternatives.rows.length >= 3) {
+    if (cachedAlternatives.length >= 3) {
       // Use cached alternatives
-      console.log(`Using ${cachedAlternatives.rows.length} cached alternatives for ${software.software_name}`);
+      console.log(`Using ${cachedAlternatives.length} cached alternatives for ${software.software_name}`);
 
-      alternatives = cachedAlternatives.rows.map(row => ({
+      alternatives = cachedAlternatives.map(row => ({
         alternative_software_name: row.alternative_software_name,
         alternative_vendor_name: row.alternative_vendor_name,
         alternative_category: row.alternative_category,
@@ -276,7 +276,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: query.rows
+      data: query
     });
 
   } catch (error) {

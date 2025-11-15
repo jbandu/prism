@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
       LIMIT 1
     `;
 
-    if (existing.rows.length > 0) {
+    if (existing.length > 0) {
       // Update existing evaluation
       await sql`
         UPDATE alternative_evaluations SET
@@ -94,13 +94,13 @@ export async function POST(request: NextRequest) {
           status = ${data.status || 'under_review'},
           evaluated_by = ${data.evaluatedBy || null},
           evaluated_at = NOW()
-        WHERE id = ${existing.rows[0].id}
+        WHERE id = ${existing[0].id}
       `;
 
       return NextResponse.json({
         success: true,
         message: 'Evaluation updated successfully',
-        evaluationId: existing.rows[0].id
+        evaluationId: existing[0].id
       });
 
     } else {
@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         message: 'Evaluation created successfully',
-        evaluationId: result.rows[0].id
+        evaluationId: result[0].id
       });
     }
 

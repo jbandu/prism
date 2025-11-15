@@ -57,12 +57,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculate summary metrics
-    const summary = calculateInsightsSummary(insights.rows);
+    const summary = calculateInsightsSummary(insights);
 
     return NextResponse.json({
       success: true,
       data: {
-        insights: insights.rows,
+        insights: insights,
         summary
       }
     });
@@ -99,14 +99,14 @@ export async function POST(request: NextRequest) {
       SELECT * FROM software WHERE id = ${softwareId} LIMIT 1
     `;
 
-    if (software.rows.length === 0) {
+    if (software.length === 0) {
       return NextResponse.json(
         { error: 'Software not found' },
         { status: 404 }
       );
     }
 
-    const softwareData = software.rows[0];
+    const softwareData = software[0];
 
     // Get usage logs for the period
     const usageLogs = await sql`
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
       ORDER BY log_date ASC
     `;
 
-    if (usageLogs.rows.length === 0) {
+    if (usageLogs.length === 0) {
       return NextResponse.json(
         { error: 'No usage data found for this period' },
         { status: 404 }
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Compute insights
-    const insights = await computeUsageInsights(softwareData, usageLogs.rows, periodStart, periodEnd, periodType);
+    const insights = await computeUsageInsights(softwareData, usageLogs, periodStart, periodEnd, periodType);
 
     // Save to database
     await sql`
