@@ -53,38 +53,59 @@ export interface AnalysisResult {
 export async function analyzePortfolioOverlaps(
   companyId: string,
   progressTracker?: ProgressTracker,
-  selectedSoftwareIds?: string[]
+  selectedSoftwareIds?: string[],
+  category?: string
 ): Promise<AnalysisResult> {
   console.log(`\n🔍 Starting portfolio overlap analysis for company ${companyId}...\n`);
+  if (category) {
+    console.log(`   📂 Analyzing category: ${category}`);
+  }
 
   progressTracker?.updateProgress('Loading Software', 5, 'Loading software portfolio...');
   progressTracker?.addActivity('📦 Querying database for active software products', 'info');
 
-  // Step 1: Get all software for this company (optionally filtered by selection)
-  const companySoftware = selectedSoftwareIds && selectedSoftwareIds.length > 0
-    ? await sql`
-        SELECT
-          id,
-          software_name,
-          vendor_name,
-          total_annual_cost as annual_cost,
-          category
-        FROM software
-        WHERE company_id = ${companyId}
-        AND contract_status = 'active'
-        AND id = ANY(${selectedSoftwareIds})
-      `
-    : await sql`
-        SELECT
-          id,
-          software_name,
-          vendor_name,
-          total_annual_cost as annual_cost,
-          category
-        FROM software
-        WHERE company_id = ${companyId}
-        AND contract_status = 'active'
-      `;
+  // Step 1: Get all software for this company (optionally filtered by selection or category)
+  let companySoftware;
+  if (selectedSoftwareIds && selectedSoftwareIds.length > 0) {
+    companySoftware = await sql`
+      SELECT
+        id,
+        software_name,
+        vendor_name,
+        total_annual_cost as annual_cost,
+        category
+      FROM software
+      WHERE company_id = ${companyId}
+      AND contract_status = 'active'
+      AND id = ANY(${selectedSoftwareIds})
+      ${category ? sql`AND category = ${category}` : sql``}
+    `;
+  } else if (category) {
+    companySoftware = await sql`
+      SELECT
+        id,
+        software_name,
+        vendor_name,
+        total_annual_cost as annual_cost,
+        category
+      FROM software
+      WHERE company_id = ${companyId}
+      AND contract_status = 'active'
+      AND category = ${category}
+    `;
+  } else {
+    companySoftware = await sql`
+      SELECT
+        id,
+        software_name,
+        vendor_name,
+        total_annual_cost as annual_cost,
+        category
+      FROM software
+      WHERE company_id = ${companyId}
+      AND contract_status = 'active'
+    `;
+  }
 
   if (selectedSoftwareIds && selectedSoftwareIds.length > 0) {
     console.log(`📦 Found ${companySoftware.length} selected software products (filtered from ${selectedSoftwareIds.length} requested)`);
