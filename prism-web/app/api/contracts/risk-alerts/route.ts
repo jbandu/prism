@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
-import { z } from 'zod';
+import { z, ZodError } from 'zod';
 
 export const runtime = 'nodejs';
 
@@ -150,7 +150,7 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     console.error('Update risk alert error:', error);
 
-    if (error instanceof z.ZodError) {
+    if (error instanceof ZodError) {
       return NextResponse.json(
         {
           error: 'Validation failed',
