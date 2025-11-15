@@ -80,3 +80,6 @@ export interface Alternative {
   cons: string[];
   analysis_date: Date;
 }
+
+// Re-export for default import compatibility
+export default sql;
