@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       RETURNING id
     `;
 
-    const contractId = insertResult.rows[0].id;
+    const contractId = insertResult[0].id;
     console.log(`Contract created with ID: ${contractId}`);
 
     try {
