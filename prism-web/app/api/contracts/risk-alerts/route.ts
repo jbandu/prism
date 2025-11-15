@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@/lib/db';
+import { sql, query } from '@/lib/db';
 import { z, ZodError } from 'zod';
 
 export const runtime = 'nodejs';
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    let query = `
+    let queryText = `
       SELECT
         cra.*,
         c.contract_name,
@@ -36,30 +36,30 @@ export async function GET(request: NextRequest) {
     let paramIndex = 1;
 
     if (companyId) {
-      query += ` AND cra.company_id = $${paramIndex}`;
+      queryText += ` AND cra.company_id = $${paramIndex}`;
       params.push(companyId);
       paramIndex++;
     }
 
     if (contractId) {
-      query += ` AND cra.contract_id = $${paramIndex}`;
+      queryText += ` AND cra.contract_id = $${paramIndex}`;
       params.push(contractId);
       paramIndex++;
     }
 
     if (status) {
-      query += ` AND cra.status = $${paramIndex}`;
+      queryText += ` AND cra.status = $${paramIndex}`;
       params.push(status);
       paramIndex++;
     }
 
     if (severity) {
-      query += ` AND cra.severity = $${paramIndex}`;
+      queryText += ` AND cra.severity = $${paramIndex}`;
       params.push(severity);
       paramIndex++;
     }
 
-    query += `
+    queryText += `
       ORDER BY
         CASE cra.severity
           WHEN 'critical' THEN 1
@@ -70,11 +70,11 @@ export async function GET(request: NextRequest) {
         cra.created_at DESC
     `;
 
-    const result = await sql.query(query, params);
+    const result = await query(queryText, params);
 
     return NextResponse.json({
       success: true,
-      data: result.rows
+      data: result
     });
 
   } catch (error) {
@@ -122,19 +122,19 @@ export async function PATCH(request: NextRequest) {
       .map((key, index) => `${key} = $${index + 2}`)
       .join(', ');
 
-    const query = `
+    const queryText = `
       UPDATE contract_risk_alerts
       SET ${setClause}
       WHERE id = $1
       RETURNING *
     `;
 
-    const result = await sql.query(query, [
+    const result = await query(queryText, [
       data.alertId,
       ...Object.values(updates)
     ]);
 
-    if (result.rows.length === 0) {
+    if (result.length === 0) {
       return NextResponse.json(
         { error: 'Risk alert not found' },
         { status: 404 }
@@ -144,7 +144,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Risk alert updated successfully',
-      data: result.rows[0]
+      data: result[0]
     });
 
   } catch (error) {

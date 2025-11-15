@@ -209,40 +209,64 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const updates: string[] = [];
-    const values: any[] = [];
-
-    if (status) {
-      updates.push('status = $' + (values.length + 1));
-      values.push(status);
-    }
-
-    if (decision) {
-      updates.push('decision = $' + (values.length + 1));
-      values.push(decision);
-      updates.push('decision_date = NOW()');
-    }
-
-    if (decisionNotes) {
-      updates.push('decision_notes = $' + (values.length + 1));
-      values.push(decisionNotes);
-    }
-
-    if (updates.length === 0) {
+    // Build conditional update based on what fields are provided
+    if (status && decision && decisionNotes) {
+      await sql`
+        UPDATE alternative_evaluations
+        SET status = ${status},
+            decision = ${decision},
+            decision_date = NOW(),
+            decision_notes = ${decisionNotes}
+        WHERE id = ${evaluationId}
+      `;
+    } else if (status && decision) {
+      await sql`
+        UPDATE alternative_evaluations
+        SET status = ${status},
+            decision = ${decision},
+            decision_date = NOW()
+        WHERE id = ${evaluationId}
+      `;
+    } else if (status && decisionNotes) {
+      await sql`
+        UPDATE alternative_evaluations
+        SET status = ${status},
+            decision_notes = ${decisionNotes}
+        WHERE id = ${evaluationId}
+      `;
+    } else if (status) {
+      await sql`
+        UPDATE alternative_evaluations
+        SET status = ${status}
+        WHERE id = ${evaluationId}
+      `;
+    } else if (decision && decisionNotes) {
+      await sql`
+        UPDATE alternative_evaluations
+        SET decision = ${decision},
+            decision_date = NOW(),
+            decision_notes = ${decisionNotes}
+        WHERE id = ${evaluationId}
+      `;
+    } else if (decision) {
+      await sql`
+        UPDATE alternative_evaluations
+        SET decision = ${decision},
+            decision_date = NOW()
+        WHERE id = ${evaluationId}
+      `;
+    } else if (decisionNotes) {
+      await sql`
+        UPDATE alternative_evaluations
+        SET decision_notes = ${decisionNotes}
+        WHERE id = ${evaluationId}
+      `;
+    } else {
       return NextResponse.json(
         { error: 'No updates provided' },
         { status: 400 }
       );
     }
-
-    // Use raw SQL for dynamic updates
-    const query = `
-      UPDATE alternative_evaluations
-      SET ${updates.join(', ')}
-      WHERE id = $${values.length + 1}
-    `;
-
-    await sql.query(query, [...values, evaluationId]);
 
     return NextResponse.json({
       success: true,
