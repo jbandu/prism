@@ -1,10 +1,13 @@
 // lib/db.ts
-import { Pool } from '@neondatabase/serverless';
+import { Pool, neon } from '@neondatabase/serverless';
 
 // Create connection pool
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
+
+// Export sql for backwards compatibility with existing code
+export const sql = neon(process.env.DATABASE_URL || "");
 
 // Generic query function with error handling
 export async function query<T = any>(
