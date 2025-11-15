@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    let query = `
+    let queryText = `
       SELECT
         cra.*,
         c.contract_name,
@@ -36,30 +36,30 @@ export async function GET(request: NextRequest) {
     let paramIndex = 1;
 
     if (companyId) {
-      query += ` AND cra.company_id = $${paramIndex}`;
+      queryText += ` AND cra.company_id = $${paramIndex}`;
       params.push(companyId);
       paramIndex++;
     }
 
     if (contractId) {
-      query += ` AND cra.contract_id = $${paramIndex}`;
+      queryText += ` AND cra.contract_id = $${paramIndex}`;
       params.push(contractId);
       paramIndex++;
     }
 
     if (status) {
-      query += ` AND cra.status = $${paramIndex}`;
+      queryText += ` AND cra.status = $${paramIndex}`;
       params.push(status);
       paramIndex++;
     }
 
     if (severity) {
-      query += ` AND cra.severity = $${paramIndex}`;
+      queryText += ` AND cra.severity = $${paramIndex}`;
       params.push(severity);
       paramIndex++;
     }
 
-    query += `
+    queryText += `
       ORDER BY
         CASE cra.severity
           WHEN 'critical' THEN 1
@@ -156,7 +156,7 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     console.error('Update risk alert error:', error);
 
-    if (error instanceof z.ZodError) {
+    if (error instanceof ZodError) {
       return NextResponse.json(
         {
           error: 'Validation failed',
