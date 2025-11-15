@@ -1,5 +1,4 @@
 import OpenAI from 'openai';
-import pdfParse from 'pdf-parse';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -66,6 +65,8 @@ export interface RiskAlert {
  */
 export async function parsePDFContract(fileBuffer: Buffer): Promise<string> {
   try {
+    // Dynamic import for CommonJS module
+    const pdfParse = (await import('pdf-parse')).default;
     const data = await pdfParse(fileBuffer);
     return data.text;
   } catch (error) {
