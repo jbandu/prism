@@ -453,7 +453,7 @@ export default function FinanceDashboard() {
                       FINANCE_DATA.costPerEmployee[0].actual) *
                     100
                   ).toFixed(1)}
-                  %) since January, indicating improved efficiency and optimization efforts. You're now{" "}
+                  %) since January, indicating improved efficiency and optimization efforts. You&apos;re now{" "}
                   <strong className="text-green-700">6% above benchmark</strong>, which is excellent for a company of
                   your size.
                 </p>

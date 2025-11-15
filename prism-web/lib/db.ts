@@ -21,55 +21,6 @@ const getNeonSql = (): NeonQueryFunction<false, false> => {
 // Export sql for use throughout the application
 export const sql = getNeonSql();
 
-// Generic query function with error handling
-export async function query<T = any>(
-  text: string,
-  params?: any[]
-): Promise<{ rows: T[]; rowCount: number | null }> {
-  const start = Date.now();
-  
-  try {
-    const result = await pool.query(text, params);
-    const duration = Date.now() - start;
-    
-    // Log slow queries (>1s)
-    if (duration > 1000) {
-      console.warn('Slow query detected:', {
-        text: text.substring(0, 100),
-        duration: `${duration}ms`,
-      });
-    }
-    
-    return result;
-  } catch (error) {
-    console.error('Database query error:', {
-      text: text.substring(0, 100),
-      params,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    throw error;
-  }
-}
-
-// Transaction helper
-export async function transaction<T>(
-  callback: (client: any) => Promise<T>
-): Promise<T> {
-  const client = await pool.connect();
-  
-  try {
-    await client.query('BEGIN');
-    const result = await callback(client);
-    await client.query('COMMIT');
-    return result;
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
-}
-
 // Typed query helpers for features
 export const featureQueries = {
   create: async (data: {
@@ -77,23 +28,23 @@ export const featureQueries = {
     companyId: string;
     initialRequest: string;
   }) => {
-    const result = await query<{ id: string }>(`
+    const result = await sql`
       INSERT INTO feature_requests (
         requested_by_user_id,
         company_id,
         initial_request,
         status,
         chat_history
-      ) VALUES ($1, $2, $3, 'refining', '[]'::jsonb)
+      ) VALUES (${data.requestedByUserId}, ${data.companyId}, ${data.initialRequest}, 'refining', '[]'::jsonb)
       RETURNING id
-    `, [data.requestedByUserId, data.companyId, data.initialRequest]);
-    
-    return result.rows[0];
+    `;
+
+    return result[0];
   },
 
   findById: async (id: string) => {
-    const result = await query(`
-      SELECT 
+    const result = await sql`
+      SELECT
         fr.*,
         u.full_name as requested_by_name,
         u.email as requested_by_email,
@@ -103,36 +54,36 @@ export const featureQueries = {
       LEFT JOIN users u ON fr.requested_by_user_id = u.id
       LEFT JOIN companies c ON fr.company_id = c.id
       LEFT JOIN users admin ON fr.reviewed_by_user_id = admin.id
-      WHERE fr.id = $1
-    `, [id]);
-    
-    return result.rows[0];
+      WHERE fr.id = ${id}
+    `;
+
+    return result[0];
   },
 
   updateChatHistory: async (id: string, chatHistory: any[]) => {
-    await query(`
+    await sql`
       UPDATE feature_requests
       SET
-        chat_history = $1,
+        chat_history = ${JSON.stringify(chatHistory)},
         updated_at = NOW()
-      WHERE id = $2
-    `, [JSON.stringify(chatHistory), id]);
+      WHERE id = ${id}
+    `;
   },
 
   finalize: async (id: string, finalRequirements: string) => {
-    await query(`
+    await sql`
       UPDATE feature_requests
       SET
-        final_requirements = $1,
+        final_requirements = ${finalRequirements},
         requirements_finalized_at = NOW(),
         status = 'submitted',
         updated_at = NOW()
-      WHERE id = $2
-    `, [finalRequirements, id]);
+      WHERE id = ${id}
+    `;
   },
 
   listPending: async () => {
-    const result = await query(`
+    const result = await sql`
       SELECT
         fr.*,
         u.full_name as requested_by_name,
@@ -148,34 +99,34 @@ export const featureQueries = {
       LEFT JOIN companies c ON fr.company_id = c.id
       WHERE fr.status = 'submitted'
       ORDER BY fr.created_at DESC
-    `);
+    `;
 
-    return result.rows;
+    return result;
   },
 
   approve: async (id: string, adminUserId: string) => {
-    await query(`
+    await sql`
       UPDATE feature_requests
       SET
         status = 'approved',
-        reviewed_by_user_id = $1,
+        reviewed_by_user_id = ${adminUserId},
         reviewed_at = NOW(),
         updated_at = NOW()
-      WHERE id = $2
-    `, [adminUserId, id]);
+      WHERE id = ${id}
+    `;
   },
 
   reject: async (id: string, adminUserId: string, reason?: string) => {
-    await query(`
+    await sql`
       UPDATE feature_requests
       SET
         status = 'rejected',
-        reviewed_by_user_id = $1,
+        reviewed_by_user_id = ${adminUserId},
         reviewed_at = NOW(),
-        admin_notes = $2,
+        admin_notes = ${reason || null},
         updated_at = NOW()
-      WHERE id = $3
-    `, [adminUserId, reason || null, id]);
+      WHERE id = ${id}
+    `;
   },
 
   // FIXED: SQL injection vulnerability
@@ -264,6 +215,5 @@ export async function checkDatabaseHealth(): Promise<{
   }
 }
 
-// Re-export pool and sql for compatibility
-export { pool };
+// Export sql as default for backwards compatibility
 export default sql;

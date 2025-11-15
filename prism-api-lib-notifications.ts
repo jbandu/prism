@@ -1,17 +1,9 @@
 // lib/notifications.ts
 
 import { Resend } from 'resend';
-import { sql } from './db';
+import { query } from './db';
 
-// Lazy initialization to avoid build-time errors
-let resendInstance: Resend | null = null;
-function getResend() {
-  if (!resendInstance) {
-    resendInstance = new Resend(process.env.RESEND_API_KEY || '');
-  }
-  return resendInstance;
-}
-
+const resend = new Resend(process.env.RESEND_API_KEY);
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'jbandu@gmail.com';
 const FROM_EMAIL = process.env.FROM_EMAIL || 'PRISM <noreply@prism.ai>';
 
@@ -89,7 +81,7 @@ ${data.logs}
         break;
     }
 
-    await getResend().emails.send({
+    await resend.emails.send({
       from: FROM_EMAIL,
       to: ADMIN_EMAIL,
       subject,
@@ -112,16 +104,16 @@ export async function sendUserNotification(data: {
 }) {
   try {
     // Get user email
-    const result = await sql`
-      SELECT email, full_name FROM users WHERE id = ${data.userId}
-    `;
+    const result = await query(`
+      SELECT email, full_name FROM users WHERE id = $1
+    `, [data.userId]);
 
-    if (result.length === 0) {
+    if (result.rowCount === 0) {
       console.warn('User not found for notification:', data.userId);
       return;
     }
 
-    const user = result[0];
+    const user = result.rows[0];
 
     let html = `
       <h2>Hello ${user.full_name},</h2>
@@ -145,7 +137,7 @@ export async function sendUserNotification(data: {
       </p>
     `;
 
-    await getResend().emails.send({
+    await resend.emails.send({
       from: FROM_EMAIL,
       to: user.email,
       subject: data.subject,

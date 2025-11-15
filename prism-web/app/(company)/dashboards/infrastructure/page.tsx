@@ -250,7 +250,7 @@ export default function InfrastructureDashboard() {
         {/* Quick Stats */}
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle className="text-lg">Today's Priority</CardTitle>
+            <CardTitle className="text-lg">Today&apos;s Priority</CardTitle>
             <CardDescription>Action items requiring attention</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -282,7 +282,7 @@ export default function InfrastructureDashboard() {
               <div className="flex items-center gap-3">
                 <TrendingDown className="w-6 h-6 text-green-600" />
                 <div>
-                  <p className="text-sm text-green-900 font-medium">Savings ID'd</p>
+                  <p className="text-sm text-green-900 font-medium">Savings ID&apos;d</p>
                   <p className="text-xl font-bold text-green-600">
                     {formatCurrency(INFRA_DASHBOARD_DATA.focusToday.savingsIdentified)}
                   </p>

@@ -1,7 +1,7 @@
 // lib/auth.ts
 import { getServerSession, type NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { query } from './db';
+import { sql } from './db';
 import bcrypt from 'bcryptjs';
 
 export interface User {
@@ -28,7 +28,7 @@ export const authOptions: NextAuthOptions = {
 
         try {
           // Query user from database
-          const result = await query<User & { password_hash: string }>(`
+          const result = await sql`
             SELECT
               u.id,
               u.email,
@@ -39,10 +39,10 @@ export const authOptions: NextAuthOptions = {
               c.company_name
             FROM users u
             LEFT JOIN companies c ON u.company_id = c.id
-            WHERE u.email = $1
-          `, [credentials.email]);
+            WHERE u.email = ${credentials.email}
+          `;
 
-          const user = result.rows[0];
+          const user = result[0];
 
           if (!user) {
             throw new Error('Invalid credentials');
@@ -110,8 +110,8 @@ export async function getCurrentUser(req: Request): Promise<User | null> {
       return null;
     }
 
-    const result = await query<User>(`
-      SELECT 
+    const result = await sql`
+      SELECT
         u.id,
         u.email,
         u.full_name,
@@ -120,10 +120,10 @@ export async function getCurrentUser(req: Request): Promise<User | null> {
         c.company_name
       FROM users u
       LEFT JOIN companies c ON u.company_id = c.id
-      WHERE u.email = $1
-    `, [session.user.email]);
+      WHERE u.email = ${session.user.email}
+    `;
 
-    return result.rows[0] || null;
+    return (result[0] as User) || null;
   } catch (error) {
     console.error('Error getting current user:', error);
     return null;
@@ -157,14 +157,14 @@ export async function canAccessFeatureRequest(
   userId: string,
   featureId: string
 ): Promise<boolean> {
-  const result = await query(`
+  const result = await sql`
     SELECT 1
     FROM feature_requests fr
     INNER JOIN users u ON fr.company_id = u.company_id
-    WHERE fr.id = $1 AND u.id = $2
-  `, [featureId, userId]);
+    WHERE fr.id = ${featureId} AND u.id = ${userId}
+  `;
 
-  return (result.rowCount ?? 0) > 0;
+  return result.length > 0;
 }
 
 // Check if user is admin

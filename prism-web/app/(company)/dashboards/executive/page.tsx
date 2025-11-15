@@ -695,7 +695,7 @@ export default function ExecutiveDashboard() {
                     Consolidate Communication Tools
                   </h4>
                   <p className="text-sm text-green-800 mb-2">
-                    You're using both Slack ($720K) and Microsoft Teams (included in M365). 67% of
+                    You&apos;re using both Slack ($720K) and Microsoft Teams (included in M365). 67% of
                     users active on both platforms.
                   </p>
                   <div className="flex items-center gap-2">

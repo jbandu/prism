@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { requireAdmin } from '@/lib/auth';
-import { featureQueries, sql } from '@/lib/db';
+import { featureQueries, query } from '@/lib/db';
 import { generateImplementationInstructions } from '@/lib/claude';
 import { 
   createFeatureIssue, 
@@ -25,17 +25,16 @@ export async function POST(req: Request) {
   let featureData: any = null;
   let issueNumber: number | null = null;
   let attemptId: string | null = null;
-  let body: BuildFeatureBody | null = null;
 
   try {
     // Require admin authentication
     await requireAdmin(req);
-
+    
     // Parse request body
-    body = await req.json();
-
+    const body: BuildFeatureBody = await req.json();
+    
     // Validate input
-    if (!body || !body.requestId) {
+    if (!body.requestId) {
       return NextResponse.json(
         { error: 'Request ID is required' },
         { status: 400 }
@@ -67,8 +66,8 @@ export async function POST(req: Request) {
     const filesText = filesMatch ? filesMatch[1] : '';
     const filesLikelyModified = filesText
       .split('\n')
-      .filter((line: string) => line.startsWith('- '))
-      .map((line: string) => line.substring(2).trim());
+      .filter(line => line.startsWith('- '))
+      .map(line => line.substring(2).trim());
 
     const complexityMatch = featureData.final_requirements.match(/\*\*Estimated Complexity:\*\* (\w+)/);
     const complexity = complexityMatch ? complexityMatch[1] : 'simple';
@@ -82,16 +81,16 @@ export async function POST(req: Request) {
     });
 
     // Create build attempt
-    const attemptResult = await sql`
+    const attemptResult = await query<{ id: string }>(`
       INSERT INTO build_attempts (
         feature_request_id,
         attempt_number,
         status
-      ) VALUES (${body.requestId}, 1, 'running')
+      ) VALUES ($1, 1, 'running')
       RETURNING id
-    `;
-
-    attemptId = attemptResult[0].id;
+    `, [body.requestId]);
+    
+    attemptId = attemptResult.rows[0].id;
 
     console.log('🚀 Starting autonomous build for feature:', body.requestId);
 
@@ -131,7 +130,7 @@ export async function POST(req: Request) {
       instructions,
       branchName,
       featureId: body.requestId,
-      attemptId: attemptId!,
+      attemptId,
     });
 
     if (!buildResult.success) {
@@ -212,16 +211,21 @@ Closes #${issue.number}
       buildLogs: buildResult.logs,
     });
 
-    await sql`
+    await query(`
       UPDATE build_attempts
-      SET
+      SET 
         status = 'success',
         completed_at = NOW(),
-        files_modified = ${buildResult.filesModified},
-        stdout = ${buildResult.logs},
-        preview_url = ${previewUrl}
-      WHERE id = ${attemptId}
-    `;
+        files_modified = $1,
+        stdout = $2,
+        preview_url = $3
+      WHERE id = $4
+    `, [
+      buildResult.filesModified,
+      buildResult.logs,
+      previewUrl,
+      attemptId,
+    ]);
 
     console.log('✅ Feature deployed successfully!');
 
@@ -243,7 +247,7 @@ Closes #${issue.number}
 
     const response: BuildFeatureResponse = {
       success: true,
-      buildId: attemptId || undefined,
+      buildId: attemptId,
       previewUrl: previewUrl || undefined,
     };
 
@@ -258,39 +262,37 @@ Closes #${issue.number}
                   'code_generation';
 
     // Update feature status to failed
-    if (featureData && body) {
+    if (featureData) {
       await featureQueries.updateBuildStatus(body.requestId, 'failed', {
         buildCompletedAt: new Date(),
-        buildError: error instanceof Error ? error.message : 'Unknown error',
+        buildError: error.message,
       });
     }
 
     // Update build attempt
     if (attemptId) {
-      await sql`
+      await query(`
         UPDATE build_attempts
-        SET
+        SET 
           status = 'failed',
           completed_at = NOW(),
-          error_message = ${error instanceof Error ? error.message : 'Unknown error'},
+          error_message = $1,
           intervention_required = TRUE
-        WHERE id = ${attemptId}
-      `;
+        WHERE id = $2
+      `, [error.message, attemptId]);
     }
 
     // Send intervention email
-    if (body) {
-      await sendInterventionEmail({
-        featureId: body.requestId,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        logs: error instanceof Error ? error.stack : undefined,
-        stage,
-      });
-    }
+    await sendInterventionEmail({
+      featureId: body.requestId,
+      error: error.message,
+      logs: error.stack,
+      stage,
+    });
 
     const response: BuildFeatureResponse = {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error.message,
     };
 
     return NextResponse.json(response, { status: 500 });
@@ -341,11 +343,11 @@ async function runClaudeCode(data: {
       logs: stdout + '\n' + stderr,
       filesModified,
     };
-  } catch (error: any) {
+  } catch (error) {
     return {
       success: false,
-      error: error?.message || 'Unknown error',
-      logs: (error?.stdout || '') + '\n' + (error?.stderr || ''),
+      error: error.message,
+      logs: error.stdout + '\n' + error.stderr,
       filesModified: [],
     };
   }

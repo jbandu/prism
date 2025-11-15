@@ -540,7 +540,7 @@ export default function DepartmentDashboard() {
                   {formatCurrency(totalSavingsFromRecommendations)}/year
                 </p>
                 <p className="text-sm text-green-100 mt-2">
-                  That's {((totalSavingsFromRecommendations / deptData.annualBudget) * 100).toFixed(1)}% of your
+                  That&apos;s {((totalSavingsFromRecommendations / deptData.annualBudget) * 100).toFixed(1)}% of your
                   annual budget
                 </p>
               </div>
