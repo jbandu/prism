@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform data for heatmap visualization
-    const heatmapData = transformToHeatmapFormat(query.rows, granularity);
+    const heatmapData = transformToHeatmapFormat(query, granularity);
 
     return NextResponse.json({
       success: true,
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
           end: end.toISOString().split('T')[0],
           granularity
         },
-        stats: calculateHeatmapStats(query.rows)
+        stats: calculateHeatmapStats(query)
       }
     });
 
