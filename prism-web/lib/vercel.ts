@@ -149,6 +149,6 @@ export async function triggerProductionDeployment(): Promise<string> {
     return result.url;
   } catch (error) {
     console.error('Error triggering production deployment:', error);
-    throw new Error(`Failed to trigger production deployment: ${error.message}`);
+    throw new Error(`Failed to trigger production deployment: ${error instanceof Error ? error.message : String(error)}`);
   }
 }

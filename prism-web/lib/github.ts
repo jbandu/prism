@@ -76,7 +76,7 @@ ${data.finalRequirements}
     };
   } catch (error) {
     console.error('Error creating GitHub issue:', error);
-    throw new Error(`Failed to create GitHub issue: ${error.message}`);
+    throw new Error(`Failed to create GitHub issue: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -108,7 +108,7 @@ export async function createPullRequest(data: {
     };
   } catch (error) {
     console.error('Error creating pull request:', error);
-    throw new Error(`Failed to create pull request: ${error.message}`);
+    throw new Error(`Failed to create pull request: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -152,7 +152,7 @@ export async function checkPRStatus(prNumber: number): Promise<{
     };
   } catch (error) {
     console.error('Error checking PR status:', error);
-    throw new Error(`Failed to check PR status: ${error.message}`);
+    throw new Error(`Failed to check PR status: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -168,7 +168,7 @@ export async function mergePullRequest(prNumber: number): Promise<void> {
     });
   } catch (error) {
     console.error('Error merging pull request:', error);
-    throw new Error(`Failed to merge pull request: ${error.message}`);
+    throw new Error(`Failed to merge pull request: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 

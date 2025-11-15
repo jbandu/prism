@@ -33,7 +33,7 @@ export async function query<T = any>(
     console.error('Database query error:', {
       text: text.substring(0, 100),
       params,
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
     });
     throw error;
   }
