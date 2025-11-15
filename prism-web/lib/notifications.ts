@@ -3,7 +3,15 @@
 import { Resend } from 'resend';
 import { query } from './db';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy initialization to avoid build-time errors
+let resendInstance: Resend | null = null;
+function getResend() {
+  if (!resendInstance) {
+    resendInstance = new Resend(process.env.RESEND_API_KEY || '');
+  }
+  return resendInstance;
+}
+
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'jbandu@gmail.com';
 const FROM_EMAIL = process.env.FROM_EMAIL || 'PRISM <noreply@prism.ai>';
 
@@ -81,7 +89,7 @@ ${data.logs}
         break;
     }
 
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM_EMAIL,
       to: ADMIN_EMAIL,
       subject,
@@ -137,7 +145,7 @@ export async function sendUserNotification(data: {
       </p>
     `;
 
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM_EMAIL,
       to: user.email,
       subject: data.subject,
