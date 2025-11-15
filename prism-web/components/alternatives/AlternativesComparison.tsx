@@ -175,7 +175,7 @@ export function AlternativesComparison({
           <Target className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">No Alternatives Found</h3>
           <p className="text-gray-600">
-            We couldn't find suitable alternatives for this software at the moment.
+            We couldn&apos;t find suitable alternatives for this software at the moment.
           </p>
         </CardContent>
       </Card>
