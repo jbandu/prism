@@ -99,8 +99,8 @@ export const featureQueries = {
 
   updateChatHistory: async (id: string, chatHistory: any[]) => {
     await query(`
-      UPDATE feature_requests 
-      SET 
+      UPDATE feature_requests
+      SET
         chat_history = $1,
         updated_at = NOW()
       WHERE id = $2
@@ -109,8 +109,8 @@ export const featureQueries = {
 
   finalize: async (id: string, finalRequirements: string) => {
     await query(`
-      UPDATE feature_requests 
-      SET 
+      UPDATE feature_requests
+      SET
         final_requirements = $1,
         requirements_finalized_at = NOW(),
         status = 'submitted',
@@ -121,14 +121,14 @@ export const featureQueries = {
 
   listPending: async () => {
     const result = await query(`
-      SELECT 
+      SELECT
         fr.*,
         u.full_name as requested_by_name,
         u.email as requested_by_email,
         c.company_name,
         (
-          SELECT COUNT(*)::int 
-          FROM feature_votes 
+          SELECT COUNT(*)::int
+          FROM feature_votes
           WHERE feature_request_id = fr.id AND vote_type = 'upvote'
         ) as upvotes
       FROM feature_requests fr
@@ -137,14 +137,14 @@ export const featureQueries = {
       WHERE fr.status = 'submitted'
       ORDER BY fr.created_at DESC
     `);
-    
+
     return result.rows;
   },
 
   approve: async (id: string, adminUserId: string) => {
     await query(`
-      UPDATE feature_requests 
-      SET 
+      UPDATE feature_requests
+      SET
         status = 'approved',
         reviewed_by_user_id = $1,
         reviewed_at = NOW(),
@@ -155,8 +155,8 @@ export const featureQueries = {
 
   reject: async (id: string, adminUserId: string, reason?: string) => {
     await query(`
-      UPDATE feature_requests 
-      SET 
+      UPDATE feature_requests
+      SET
         status = 'rejected',
         reviewed_by_user_id = $1,
         reviewed_at = NOW(),
@@ -167,8 +167,8 @@ export const featureQueries = {
   },
 
   updateBuildStatus: async (
-    id: string, 
-    status: string, 
+    id: string,
+    status: string,
     data?: {
       buildStartedAt?: Date;
       buildCompletedAt?: Date;
@@ -215,11 +215,31 @@ export const featureQueries = {
     params.push(id);
 
     await query(`
-      UPDATE feature_requests 
+      UPDATE feature_requests
       SET ${updates.join(', ')}
       WHERE id = $${paramIndex}
     `, params);
   },
 };
 
-export default pool;
+export interface Alternative {
+  alternative_id: string;
+  software_id: string;
+  alternative_name: string;
+  vendor_name: string;
+  category: string;
+  estimated_annual_cost: number;
+  feature_match_score: number;
+  feature_comparison: any;
+  migration_complexity: string;
+  migration_cost: number;
+  potential_savings: number;
+  recommendation_score: number;
+  pros: string[];
+  cons: string[];
+  analysis_date: Date;
+}
+
+// Re-export pool and sql for compatibility
+export { pool };
+export default sql;
