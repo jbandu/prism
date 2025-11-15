@@ -13,7 +13,7 @@ export const sql = neon(process.env.DATABASE_URL || "");
 export async function query<T = any>(
   text: string,
   params?: any[]
-): Promise<{ rows: T[]; rowCount: number }> {
+): Promise<{ rows: T[]; rowCount: number | null }> {
   const start = Date.now();
   
   try {

@@ -66,7 +66,11 @@ Respond with your next message to the user.`;
       }]
     });
 
-    return response.content[0].text;
+    const firstBlock = response.content[0];
+    if (firstBlock.type === 'text') {
+      return firstBlock.text;
+    }
+    throw new Error('Unexpected response format from Claude API');
   } catch (error) {
     console.error('Claude API error:', error);
     throw new Error('Failed to refine feature request with AI');
@@ -134,7 +138,7 @@ Output ONLY valid JSON, no markdown formatting.`;
       }]
     });
 
-    const jsonText = response.content[0].text;
+    const jsonText = (() => { const block = response.content[0]; return block.type === "text" ? block.text : ""; })();
     // Strip markdown code blocks if present
     const cleanJson = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     
@@ -193,7 +197,7 @@ Keep instructions concise but complete.`;
       }]
     });
 
-    return response.content[0].text;
+    return (() => { const block = response.content[0]; return block.type === "text" ? block.text : ""; })();
   } catch (error) {
     console.error('Failed to generate implementation instructions:', error);
     throw new Error('Failed to generate implementation instructions');

@@ -25,16 +25,17 @@ export async function POST(req: Request) {
   let featureData: any = null;
   let issueNumber: number | null = null;
   let attemptId: string | null = null;
+  let body: BuildFeatureBody | null = null;
 
   try {
     // Require admin authentication
     await requireAdmin(req);
-    
+
     // Parse request body
-    const body: BuildFeatureBody = await req.json();
-    
+    body = await req.json();
+
     // Validate input
-    if (!body.requestId) {
+    if (!body || !body.requestId) {
       return NextResponse.json(
         { error: 'Request ID is required' },
         { status: 400 }
@@ -66,8 +67,8 @@ export async function POST(req: Request) {
     const filesText = filesMatch ? filesMatch[1] : '';
     const filesLikelyModified = filesText
       .split('\n')
-      .filter(line => line.startsWith('- '))
-      .map(line => line.substring(2).trim());
+      .filter((line: string) => line.startsWith('- '))
+      .map((line: string) => line.substring(2).trim());
 
     const complexityMatch = featureData.final_requirements.match(/\*\*Estimated Complexity:\*\* (\w+)/);
     const complexity = complexityMatch ? complexityMatch[1] : 'simple';
@@ -262,10 +263,10 @@ Closes #${issue.number}
                   'code_generation';
 
     // Update feature status to failed
-    if (featureData) {
+    if (featureData && body) {
       await featureQueries.updateBuildStatus(body.requestId, 'failed', {
         buildCompletedAt: new Date(),
-        buildError: error.message,
+        buildError: error instanceof Error ? error.message : 'Unknown error',
       });
     }
 
@@ -273,26 +274,28 @@ Closes #${issue.number}
     if (attemptId) {
       await query(`
         UPDATE build_attempts
-        SET 
+        SET
           status = 'failed',
           completed_at = NOW(),
           error_message = $1,
           intervention_required = TRUE
         WHERE id = $2
-      `, [error.message, attemptId]);
+      `, [error instanceof Error ? error.message : 'Unknown error', attemptId]);
     }
 
     // Send intervention email
-    await sendInterventionEmail({
-      featureId: body.requestId,
-      error: error.message,
-      logs: error.stack,
-      stage,
-    });
+    if (body) {
+      await sendInterventionEmail({
+        featureId: body.requestId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        logs: error instanceof Error ? error.stack : undefined,
+        stage,
+      });
+    }
 
     const response: BuildFeatureResponse = {
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
 
     return NextResponse.json(response, { status: 500 });
@@ -343,11 +346,11 @@ async function runClaudeCode(data: {
       logs: stdout + '\n' + stderr,
       filesModified,
     };
-  } catch (error) {
+  } catch (error: any) {
     return {
       success: false,
-      error: error.message,
-      logs: error.stdout + '\n' + error.stderr,
+      error: error?.message || 'Unknown error',
+      logs: (error?.stdout || '') + '\n' + (error?.stderr || ''),
       filesModified: [],
     };
   }

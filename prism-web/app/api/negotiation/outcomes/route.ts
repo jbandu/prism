@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!canModify(session.user as any)) {
+    if (!canModify(session.user as any, company_id)) {
       return NextResponse.json(
         { error: 'Forbidden - Modification not allowed' },
         { status: 403 }

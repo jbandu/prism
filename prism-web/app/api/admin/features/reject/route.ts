@@ -58,8 +58,9 @@ export async function POST(req: Request) {
 
   } catch (error) {
     console.error('Error rejecting feature request:', error);
-    
-    if (error.message === 'Unauthorized' || error.message.includes('Admin')) {
+
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    if (errorMessage === 'Unauthorized' || errorMessage.includes('Admin')) {
       return NextResponse.json(
         { error: 'Unauthorized - Admin access required' },
         { status: 403 }

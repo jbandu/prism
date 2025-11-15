@@ -117,8 +117,9 @@ export async function POST(req: Request) {
 
   } catch (error) {
     console.error('Error refining feature request:', error);
-    
-    if (error.message === 'Unauthorized') {
+
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    if (errorMessage === 'Unauthorized') {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

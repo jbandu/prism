@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user can modify
-    if (!canModify(session.user as any)) {
+    if (!canModify(session.user as any, company_id)) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Forbidden - Modification not allowed" },
         { status: 403 }

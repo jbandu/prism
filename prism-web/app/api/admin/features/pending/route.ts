@@ -38,8 +38,9 @@ export async function GET(req: Request) {
 
   } catch (error) {
     console.error('Error fetching pending requests:', error);
-    
-    if (error.message === 'Unauthorized' || error.message.includes('Admin')) {
+
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    if (errorMessage === 'Unauthorized' || errorMessage.includes('Admin')) {
       return NextResponse.json(
         { error: 'Unauthorized - Admin access required' },
         { status: 403 }

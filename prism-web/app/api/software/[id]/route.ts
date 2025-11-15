@@ -88,7 +88,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check if user can modify
-    if (!canModify(session.user as any)) {
+    if (!canModify(session.user as any, existingSoftware.company_id)) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Forbidden - Modification not allowed" },
         { status: 403 }
@@ -157,7 +157,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check if user can modify
-    if (!canModify(session.user as any)) {
+    if (!canModify(session.user as any, existingSoftware.company_id)) {
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Forbidden - Modification not allowed" },
         { status: 403 }

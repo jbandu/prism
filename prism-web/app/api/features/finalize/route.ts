@@ -78,10 +78,11 @@ ${synthesized.filesLikelyModified.map(f => `- ${f}`).join('\n')}
     await featureQueries.finalize(body.featureId, finalRequirements);
 
     // Update tags and complexity in database
-    await featureQueries.updateMetadata(body.featureId, {
-      tags: synthesized.tags,
-      estimatedComplexity: synthesized.estimatedComplexity,
-    });
+    // TODO: Implement updateMetadata function in featureQueries
+    // await featureQueries.updateMetadata(body.featureId, {
+    //   tags: synthesized.tags,
+    //   estimatedComplexity: synthesized.estimatedComplexity,
+    // });
 
     // Notify admins
     await sendAdminNotification({
@@ -102,8 +103,9 @@ ${synthesized.filesLikelyModified.map(f => `- ${f}`).join('\n')}
 
   } catch (error) {
     console.error('Error finalizing feature request:', error);
-    
-    if (error.message === 'Unauthorized') {
+
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    if (errorMessage === 'Unauthorized') {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

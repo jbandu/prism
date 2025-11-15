@@ -164,7 +164,7 @@ export async function canAccessFeatureRequest(
     WHERE fr.id = $1 AND u.id = $2
   `, [featureId, userId]);
 
-  return result.rowCount > 0;
+  return (result.rowCount ?? 0) > 0;
 }
 
 // Check if user is admin
