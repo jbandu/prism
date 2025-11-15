@@ -86,7 +86,7 @@ export async function extractOrgStructure(
     company_name: company.company_name,
     industry: company.industry || "Technology",
     employee_count: company.employee_count || 1000,
-    revenue: null,
+    revenue: undefined,
     software_list: software.map((s: any) => ({
       id: s.id,
       software_name: s.software_name,
