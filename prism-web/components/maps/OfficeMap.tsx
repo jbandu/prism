@@ -38,7 +38,8 @@ interface OfficeMapProps {
   companyId: string;
 }
 
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
+// MapLibre doesn't require a Mapbox token - we use free OSM styles
+const MAP_STYLE = "https://demotiles.maplibre.org/style.json";
 
 export function OfficeMap({ offices, companyId }: OfficeMapProps) {
   const mapRef = useRef<any>(null);
@@ -134,22 +135,7 @@ export function OfficeMap({ offices, companyId }: OfficeMapProps) {
     `;
   };
 
-  if (!MAPBOX_TOKEN) {
-    return (
-      <div className="flex items-center justify-center h-[calc(100vh-200px)] bg-gray-50 rounded-xl">
-        <div className="text-center p-8">
-          <MapIcon className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Mapbox Token Required
-          </h3>
-          <p className="text-gray-600 max-w-md">
-            Please configure NEXT_PUBLIC_MAPBOX_TOKEN in your environment
-            variables to enable the map feature.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // MapLibre works without tokens - no need for token check
 
   return (
     <div className="relative">
@@ -195,8 +181,7 @@ export function OfficeMap({ offices, companyId }: OfficeMapProps) {
           ref={mapRef}
           {...viewState}
           onMove={(evt) => setViewState(evt.viewState)}
-          mapStyle="mapbox://styles/mapbox/dark-v11"
-          mapboxAccessToken={MAPBOX_TOKEN}
+          mapStyle={MAP_STYLE}
           style={{ width: "100%", height: "100%" }}
           attributionControl={false}
         >
@@ -280,7 +265,7 @@ export function OfficeMap({ offices, companyId }: OfficeMapProps) {
 
         {/* Attribution */}
         <div className="absolute bottom-2 left-2 text-xs text-gray-400 bg-black/50 px-2 py-1 rounded">
-          © Mapbox © OpenStreetMap
+          © MapLibre © OpenStreetMap
         </div>
       </div>
 
