@@ -207,7 +207,7 @@ export async function POST(request: NextRequest) {
         ${person_id},
         ${role_type},
         ${role_level || null},
-        ${responsibilities ? sql.array(responsibilities) : null},
+        ${responsibilities ? JSON.stringify(responsibilities) : null},
         ${decision_weight || null},
         ${engagement_frequency || null}
       )

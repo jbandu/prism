@@ -397,7 +397,7 @@ export async function saveOrgStructure(
             ${personId},
             ${stakeholder.role_type},
             ${stakeholder.role_level},
-            ${sql.array(stakeholder.responsibilities)},
+            ${JSON.stringify(stakeholder.responsibilities)},
             ${stakeholder.decision_weight}
           )
           ON CONFLICT (software_asset_id, person_id, role_type) DO NOTHING

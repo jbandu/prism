@@ -115,7 +115,7 @@ export async function PUT(
       SET
         role_type = COALESCE(${role_type}, role_type),
         role_level = COALESCE(${role_level}, role_level),
-        responsibilities = ${responsibilities !== undefined ? sql.array(responsibilities) : sql`responsibilities`},
+        responsibilities = ${responsibilities !== undefined ? JSON.stringify(responsibilities) : sql`responsibilities`},
         decision_weight = ${decision_weight !== undefined ? decision_weight : sql`decision_weight`},
         engagement_frequency = COALESCE(${engagement_frequency}, engagement_frequency),
         last_contacted = ${last_contacted !== undefined ? last_contacted : sql`last_contacted`}
