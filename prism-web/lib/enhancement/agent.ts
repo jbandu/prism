@@ -133,16 +133,18 @@ Only include fields that you can confidently enhance. If unsure, omit the field.
     });
 
     if (updates.length > 0) {
-      // Add software_id for WHERE clause
+      // Add last_enhanced timestamp
       updates.push(`last_enhanced = NOW()`);
+
+      // Execute update using direct SQL call with parameters
+      const queryText = `
+        UPDATE software
+        SET ${updates.join(', ')}
+        WHERE id = $${paramIndex}
+      `;
       values.push(softwareId);
 
-      // Execute update
-      await sql`
-        UPDATE software
-        SET ${sql.unsafe(updates.join(', '))}
-        WHERE id = ${softwareId}
-      `;
+      await sql(queryText, values);
     }
 
     const totalTime = Date.now() - startTime;
