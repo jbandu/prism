@@ -66,8 +66,10 @@ export interface RiskAlert {
 export async function parsePDFContract(fileBuffer: Buffer): Promise<string> {
   try {
     // Dynamic import for CommonJS module
-    const pdfParse = (await import('pdf-parse')).default;
-    const data = await pdfParse(fileBuffer);
+    // pdf-parse exports the function directly, not as default
+    const pdfParse = await import('pdf-parse') as any;
+    const parseFunc = pdfParse.default || pdfParse;
+    const data = await parseFunc(fileBuffer);
     return data.text;
   } catch (error) {
     console.error('PDF parsing error:', error);
