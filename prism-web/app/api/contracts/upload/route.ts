@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
-import { z } from 'zod';
+import { z, ZodError } from 'zod';
 import {
   parsePDFContract,
   analyzeContract,

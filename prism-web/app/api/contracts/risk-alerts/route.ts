@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
-import { z } from 'zod';
+import { z, ZodError } from 'zod';
 
 export const runtime = 'nodejs';
 
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
     `;
 
     // Replace placeholders with actual values
-    let finalQuery = query;
+    let finalQuery = queryText;
     params.forEach((param, idx) => {
       const escapedParam = typeof param === 'string' ? `'${param.replace(/'/g, "''")}'` : param;
       finalQuery = finalQuery.replace(`$${idx + 1}`, escapedParam);
