@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,7 @@ export default function SoftwarePage({
 }: {
   params: { companyId: string };
 }) {
+  const router = useRouter();
   const [software, setSoftware] = useState<Software[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -321,7 +323,11 @@ export default function SoftwarePage({
                     const wasteAmount = parseFloat(item.waste_amount as any) || 0;
 
                     return (
-                      <TableRow key={item.id || item.software_id} className="hover:bg-gray-50">
+                      <TableRow
+                        key={item.id || item.software_id}
+                        className="hover:bg-gray-50 cursor-pointer"
+                        onClick={() => router.push(`/${params.companyId}/software/${item.id || item.software_id}`)}
+                      >
                         <TableCell>
                           <div>
                             <p className="font-medium text-gray-900">{item.software_name}</p>
@@ -398,9 +404,12 @@ export default function SoftwarePage({
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => toast.info("Edit feature coming soon!", {
-                                description: "You'll be able to edit software details in the next update."
-                              })}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toast.info("Edit feature coming soon!", {
+                                  description: "You'll be able to edit software details in the next update."
+                                });
+                              }}
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
@@ -408,9 +417,12 @@ export default function SoftwarePage({
                               variant="ghost"
                               size="sm"
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              onClick={() => toast.info("Delete feature coming soon!", {
-                                description: "You'll be able to remove software from inventory in the next update."
-                              })}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toast.info("Delete feature coming soon!", {
+                                  description: "You'll be able to remove software from inventory in the next update."
+                                });
+                              }}
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
