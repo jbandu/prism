@@ -514,14 +514,14 @@ export async function enrichPortfolioFeatures(
   const softwareQuery = options.selectedSoftwareIds && options.selectedSoftwareIds.length > 0
     ? sql`
         SELECT id, software_name, vendor_name, category
-        FROM software_assets
+        FROM software
         WHERE company_id = ${companyId}
         AND contract_status = 'active'
         AND id = ANY(${options.selectedSoftwareIds})
       `
     : sql`
         SELECT id, software_name, vendor_name, category
-        FROM software_assets
+        FROM software
         WHERE company_id = ${companyId}
         AND contract_status = 'active'
       `;

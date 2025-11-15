@@ -69,7 +69,7 @@ export async function analyzePortfolioOverlaps(
           vendor_name,
           total_annual_cost as annual_cost,
           category
-        FROM software_assets
+        FROM software
         WHERE company_id = ${companyId}
         AND contract_status = 'active'
         AND id = ANY(${selectedSoftwareIds})
@@ -81,7 +81,7 @@ export async function analyzePortfolioOverlaps(
           vendor_name,
           total_annual_cost as annual_cost,
           category
-        FROM software_assets
+        FROM software
         WHERE company_id = ${companyId}
         AND contract_status = 'active'
       `;

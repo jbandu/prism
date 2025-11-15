@@ -313,7 +313,7 @@ export async function getRecommendations(
       sw_keep.vendor_name as keep_vendor,
       sw_keep.annual_cost as keep_cost
     FROM consolidation_recommendations cr
-    JOIN software_assets sw_keep ON cr.software_to_keep_id = sw_keep.id
+    JOIN software sw_keep ON cr.software_to_keep_id = sw_keep.id
     WHERE cr.company_id = ${companyId}
     AND cr.status = ${status}
     ORDER BY cr.annual_savings DESC
