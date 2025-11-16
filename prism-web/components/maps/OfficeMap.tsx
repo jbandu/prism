@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Map as MapGL, Marker, Popup, NavigationControl, FullscreenControl } from "react-map-gl/mapbox";
+import { Map as MapGL, Marker, Popup, NavigationControl, FullscreenControl } from "react-map-gl/maplibre";
 import { MapPin, List, Map as MapIcon, Thermometer } from "lucide-react";
 import { OfficePopup } from "./OfficePopup";
 import { OfficeListSidebar } from "./OfficeListSidebar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import "mapbox-gl/dist/mapbox-gl.css";
+import "maplibre-gl/dist/maplibre-gl.css";
 
 interface Office {
   id: string;
@@ -271,7 +271,7 @@ export function OfficeMap({ offices, companyId }: OfficeMapProps) {
 
       {/* Global popup styles */}
       <style jsx global>{`
-        .office-popup .mapboxgl-popup-content {
+        .office-popup .maplibregl-popup-content {
           padding: 16px;
           background: rgba(255, 255, 255, 0.98);
           backdrop-filter: blur(10px);
@@ -280,18 +280,18 @@ export function OfficeMap({ offices, companyId }: OfficeMapProps) {
             0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
 
-        .office-popup .mapboxgl-popup-close-button {
+        .office-popup .maplibregl-popup-close-button {
           font-size: 24px;
           padding: 4px 8px;
           color: #6b7280;
         }
 
-        .office-popup .mapboxgl-popup-close-button:hover {
+        .office-popup .maplibregl-popup-close-button:hover {
           background-color: #f3f4f6;
           color: #111827;
         }
 
-        .office-popup .mapboxgl-popup-tip {
+        .office-popup .maplibregl-popup-tip {
           border-top-color: rgba(255, 255, 255, 0.98);
         }
       `}</style>
