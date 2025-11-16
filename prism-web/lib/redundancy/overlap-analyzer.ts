@@ -66,7 +66,8 @@ export async function analyzePortfolioOverlaps(
 
   // Step 1: Get all software for this company (optionally filtered by selection or category)
   let companySoftware;
-  if (selectedSoftwareIds && selectedSoftwareIds.length > 0) {
+  if (selectedSoftwareIds && selectedSoftwareIds.length > 0 && category) {
+    // Selected software + category filter
     companySoftware = await sql`
       SELECT
         id,
@@ -78,9 +79,24 @@ export async function analyzePortfolioOverlaps(
       WHERE company_id = ${companyId}
       AND contract_status = 'active'
       AND id = ANY(${selectedSoftwareIds})
-      ${category ? sql`AND category = ${category}` : sql``}
+      AND category = ${category}
+    `;
+  } else if (selectedSoftwareIds && selectedSoftwareIds.length > 0) {
+    // Selected software only (no category filter)
+    companySoftware = await sql`
+      SELECT
+        id,
+        software_name,
+        vendor_name,
+        total_annual_cost as annual_cost,
+        category
+      FROM software
+      WHERE company_id = ${companyId}
+      AND contract_status = 'active'
+      AND id = ANY(${selectedSoftwareIds})
     `;
   } else if (category) {
+    // Category filter only
     companySoftware = await sql`
       SELECT
         id,
@@ -94,6 +110,7 @@ export async function analyzePortfolioOverlaps(
       AND category = ${category}
     `;
   } else {
+    // No filters
     companySoftware = await sql`
       SELECT
         id,

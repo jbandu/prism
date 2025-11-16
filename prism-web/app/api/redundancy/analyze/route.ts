@@ -70,16 +70,27 @@ export async function POST(request: Request) {
 
     // Get software count for progress tracking
     let softwareCountQuery;
-    if (selectedSoftwareIds && selectedSoftwareIds.length > 0) {
+    if (selectedSoftwareIds && selectedSoftwareIds.length > 0 && category) {
+      // Selected software + category filter
       softwareCountQuery = sql`
         SELECT COUNT(*) as count
         FROM software
         WHERE company_id = ${resolvedCompanyId}
         AND contract_status = 'active'
         AND id = ANY(${selectedSoftwareIds})
-        ${category ? sql`AND category = ${category}` : sql``}
+        AND category = ${category}
+      `;
+    } else if (selectedSoftwareIds && selectedSoftwareIds.length > 0) {
+      // Selected software only (no category filter)
+      softwareCountQuery = sql`
+        SELECT COUNT(*) as count
+        FROM software
+        WHERE company_id = ${resolvedCompanyId}
+        AND contract_status = 'active'
+        AND id = ANY(${selectedSoftwareIds})
       `;
     } else if (category) {
+      // Category filter only
       softwareCountQuery = sql`
         SELECT COUNT(*) as count
         FROM software
@@ -88,6 +99,7 @@ export async function POST(request: Request) {
         AND category = ${category}
       `;
     } else {
+      // No filters
       softwareCountQuery = sql`
         SELECT COUNT(*) as count
         FROM software
