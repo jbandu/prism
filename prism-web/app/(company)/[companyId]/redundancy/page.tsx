@@ -43,6 +43,9 @@ export default function RedundancyPage() {
   const [selectedSoftwareIds, setSelectedSoftwareIds] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<'name' | 'cost' | 'vendor' | 'category' | 'licenses'>('cost');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [viewMode, setViewMode] = useState<'category' | 'flat'>('category'); // New: category or flat view
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null); // New: filter by category
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set()); // New: which categories are expanded
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -185,6 +188,93 @@ export default function RedundancyPage() {
 
   const deselectAllSoftware = () => {
     setSelectedSoftwareIds(new Set());
+  };
+
+  // New: Get software grouped by category
+  const getGroupedSoftware = () => {
+    const grouped = new Map<string, Software[]>();
+
+    software.forEach((sw) => {
+      const category = sw.category || 'Uncategorized';
+      if (!grouped.has(category)) {
+        grouped.set(category, []);
+      }
+      grouped.get(category)!.push(sw);
+    });
+
+    // Sort software within each category
+    grouped.forEach((list) => {
+      list.sort((a, b) => {
+        let comparison = 0;
+        switch (sortBy) {
+          case 'name':
+            comparison = a.software_name.localeCompare(b.software_name);
+            break;
+          case 'cost':
+            comparison = (a.annual_cost || 0) - (b.annual_cost || 0);
+            break;
+          case 'vendor':
+            comparison = (a.vendor_name || '').localeCompare(b.vendor_name || '');
+            break;
+          case 'licenses':
+            comparison = (a.license_count || 0) - (b.license_count || 0);
+            break;
+        }
+        return sortDirection === 'asc' ? comparison : -comparison;
+      });
+    });
+
+    // Sort categories by total cost
+    return new Map(
+      Array.from(grouped.entries()).sort((a, b) => {
+        const costA = a[1].reduce((sum, sw) => sum + (sw.annual_cost || 0), 0);
+        const costB = b[1].reduce((sum, sw) => sum + (sw.annual_cost || 0), 0);
+        return costB - costA;
+      })
+    );
+  };
+
+  // New: Toggle category expansion
+  const toggleCategory = (category: string) => {
+    setExpandedCategories((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(category)) {
+        newSet.delete(category);
+      } else {
+        newSet.add(category);
+      }
+      return newSet;
+    });
+  };
+
+  // New: Select all software in a category
+  const toggleCategorySelection = (category: string) => {
+    const categorySoftware = software.filter((sw) => (sw.category || 'Uncategorized') === category);
+    const categoryIds = new Set(categorySoftware.map((sw) => sw.id));
+    const allSelected = categorySoftware.every((sw) => selectedSoftwareIds.has(sw.id));
+
+    setSelectedSoftwareIds((prev) => {
+      const newSet = new Set(prev);
+      if (allSelected) {
+        // Deselect all in category
+        categoryIds.forEach((id) => newSet.delete(id));
+      } else {
+        // Select all in category
+        categoryIds.forEach((id) => newSet.add(id));
+      }
+      return newSet;
+    });
+  };
+
+  // New: Expand all categories
+  const expandAllCategories = () => {
+    const allCategories = new Set(software.map((sw) => sw.category || 'Uncategorized'));
+    setExpandedCategories(allCategories);
+  };
+
+  // New: Collapse all categories
+  const collapseAllCategories = () => {
+    setExpandedCategories(new Set());
   };
 
   const getSortedSoftware = () => {
@@ -806,6 +896,90 @@ Savings: $280,000/year`} />
           {/* Selection Controls */}
           {software.length > 0 && (
             <div className="mb-6 space-y-3">
+              {/* View Mode & Category Filter */}
+              <div className="flex items-center justify-between p-4 bg-gray-900/50 border border-gray-700/50 rounded-lg">
+                <div className="flex items-center gap-4">
+                  {/* View Mode Toggle */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-400">View:</span>
+                    <button
+                      onClick={() => {
+                        setViewMode('category');
+                        expandAllCategories();
+                      }}
+                      className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                        viewMode === 'category'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                      }`}
+                    >
+                      By Category
+                    </button>
+                    <button
+                      onClick={() => setViewMode('flat')}
+                      className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                        viewMode === 'flat'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                      }`}
+                    >
+                      Flat List
+                    </button>
+                  </div>
+
+                  {/* Category Filter (only in category view) */}
+                  {viewMode === 'category' && (
+                    <>
+                      <div className="h-6 w-px bg-gray-700"></div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-400">Filter:</span>
+                        <select
+                          value={selectedCategory || ''}
+                          onChange={(e) => {
+                            const value = e.target.value || null;
+                            setSelectedCategory(value);
+                            if (value) {
+                              setExpandedCategories(new Set([value]));
+                            } else {
+                              expandAllCategories();
+                            }
+                          }}
+                          className="px-3 py-1.5 text-sm bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:border-blue-500"
+                        >
+                          <option value="">All Categories</option>
+                          {Array.from(new Set(software.map((sw) => sw.category || 'Uncategorized')))
+                            .sort()
+                            .map((cat) => (
+                              <option key={cat} value={cat}>
+                                {cat}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Expand/Collapse All (only in category view) */}
+                  {viewMode === 'category' && !selectedCategory && (
+                    <>
+                      <div className="h-6 w-px bg-gray-700"></div>
+                      <button
+                        onClick={expandAllCategories}
+                        className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg transition-colors"
+                      >
+                        Expand All
+                      </button>
+                      <button
+                        onClick={collapseAllCategories}
+                        className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg transition-colors"
+                      >
+                        Collapse All
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
               {/* Selection Status */}
               <div className="flex items-center justify-between p-4 bg-gray-900/50 border border-gray-700/50 rounded-lg">
                 <div className="flex items-center gap-4">
@@ -832,7 +1006,7 @@ Savings: $280,000/year`} />
                     onClick={deselectAllSoftware}
                     className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg transition-colors"
                   >
-                    Deselect All
+                    Select None
                   </button>
                 </div>
               </div>
@@ -923,8 +1097,149 @@ Savings: $280,000/year`} />
               <p className="text-sm text-gray-500">Add software to your portfolio to run redundancy analysis</p>
             </div>
           ) : showPortfolio ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {getSortedSoftware().map((sw) => {
+            viewMode === 'category' ? (
+              // Category View
+              <div className="space-y-6">
+                {Array.from(getGroupedSoftware().entries())
+                  .filter(([category]) => !selectedCategory || category === selectedCategory)
+                  .map(([category, categorySoftware]) => {
+                    const isExpanded = expandedCategories.has(category);
+                    const categoryTotal = categorySoftware.reduce((sum, sw) => sum + (sw.annual_cost || 0), 0);
+                    const selectedCount = categorySoftware.filter((sw) => selectedSoftwareIds.has(sw.id)).length;
+                    const allSelected = categorySoftware.length > 0 && selectedCount === categorySoftware.length;
+                    const someSelected = selectedCount > 0 && !allSelected;
+
+                    return (
+                      <div key={category} className="bg-gray-900/50 rounded-lg border border-gray-700/50">
+                        {/* Category Header */}
+                        <div className="p-4 border-b border-gray-700/50">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4 flex-1">
+                              {/* Category Select Checkbox */}
+                              <button
+                                onClick={() => toggleCategorySelection(category)}
+                                className={`flex-shrink-0 w-5 h-5 rounded border-2 transition-all ${
+                                  allSelected
+                                    ? 'bg-blue-600 border-blue-600'
+                                    : someSelected
+                                    ? 'bg-blue-600/50 border-blue-600'
+                                    : 'border-gray-500 hover:border-blue-400'
+                                } flex items-center justify-center`}
+                                title={allSelected ? 'Deselect all in category' : 'Select all in category'}
+                              >
+                                {allSelected && (
+                                  <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                                {someSelected && !allSelected && (
+                                  <div className="w-2 h-2 bg-white rounded-sm"></div>
+                                )}
+                              </button>
+
+                              {/* Category Name & Stats */}
+                              <div className="flex-1">
+                                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                  {category}
+                                  <span className="px-2 py-0.5 bg-gray-700 text-gray-300 text-xs rounded-full">
+                                    {categorySoftware.length}
+                                  </span>
+                                </h3>
+                                <p className="text-sm text-gray-400 mt-1">
+                                  ${(categoryTotal / 1000).toFixed(0)}K annual cost •{' '}
+                                  <span className="text-blue-400">{selectedCount} selected</span>
+                                </p>
+                              </div>
+
+                              {/* Expand/Collapse Button */}
+                              <button
+                                onClick={() => toggleCategory(category)}
+                                className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+                              >
+                                <ChevronDown
+                                  className={`w-5 h-5 text-gray-400 transition-transform ${
+                                    isExpanded ? 'rotate-180' : ''
+                                  }`}
+                                />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Category Software Grid */}
+                        {isExpanded && (
+                          <div className="p-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {categorySoftware.map((sw) => {
+                                const isSelected = selectedSoftwareIds.has(sw.id);
+                                return (
+                                  <div
+                                    key={sw.id}
+                                    className={`bg-gray-800/50 rounded-lg p-4 border-2 transition-all ${
+                                      isSelected
+                                        ? 'border-blue-500 shadow-lg shadow-blue-900/30'
+                                        : 'border-gray-700 hover:border-gray-600'
+                                    }`}
+                                  >
+                                    <div className="flex items-start gap-3 mb-3">
+                                      <button
+                                        onClick={() => toggleSoftwareSelection(sw.id)}
+                                        className={`flex-shrink-0 w-5 h-5 rounded border-2 transition-all ${
+                                          isSelected
+                                            ? 'bg-blue-600 border-blue-600'
+                                            : 'border-gray-500 hover:border-blue-400'
+                                        } flex items-center justify-center`}
+                                        title={isSelected ? 'Exclude from analysis' : 'Include in analysis'}
+                                      >
+                                        {isSelected && (
+                                          <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                          </svg>
+                                        )}
+                                      </button>
+                                      <LogoImage
+                                        name={sw.vendor_name || sw.software_name}
+                                        size={48}
+                                        className="flex-shrink-0"
+                                      />
+                                      <div className="flex-1 min-w-0">
+                                        <h3 className="font-semibold text-white truncate">{sw.software_name}</h3>
+                                        <p className="text-sm text-gray-400 truncate">{sw.vendor_name}</p>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center justify-between pt-3 border-t border-gray-700">
+                                      <div>
+                                        <p className="text-xs text-gray-500">Annual Cost</p>
+                                        <p className="text-lg font-bold text-white">
+                                          ${(sw.annual_cost / 1000).toFixed(0)}K
+                                        </p>
+                                      </div>
+                                      <div className="text-right">
+                                        <p className="text-xs text-gray-500">Licenses</p>
+                                        <p className="text-lg font-bold text-white">{sw.license_count}</p>
+                                      </div>
+                                    </div>
+                                    <button
+                                      onClick={() => setSelectedSoftwareForTagging(sw)}
+                                      className="mt-3 w-full py-2 px-3 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+                                    >
+                                      <Tag className="w-4 h-4" />
+                                      Tag Features
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            ) : (
+              // Flat View (original)
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {getSortedSoftware().map((sw) => {
                 const isSelected = selectedSoftwareIds.has(sw.id);
                 return (
                   <div
@@ -988,6 +1303,7 @@ Savings: $280,000/year`} />
                 );
               })}
             </div>
+            )
           ) : (
             <button
               onClick={() => setShowPortfolio(true)}
