@@ -113,6 +113,7 @@ export default function ImportPage({
       "software_name",
       "vendor_name",
       "category",
+      "product_description",
       "total_annual_cost",
       "total_licenses",
       "active_users",
@@ -131,6 +132,7 @@ export default function ImportPage({
           `"${item.software_name}"`,
           `"${item.vendor_name}"`,
           `"${item.category}"`,
+          `"${(item.product_description || "").replace(/"/g, '""')}"`,
           parseFloat(item.total_annual_cost as any) || 0,
           item.total_licenses,
           item.active_users,
@@ -147,6 +149,7 @@ export default function ImportPage({
         '"Salesforce"',
         '"Salesforce Inc"',
         '"CRM"',
+        '"Cloud-based CRM platform for sales, service, and marketing automation"',
         '120000',
         '100',
         '85',
@@ -234,6 +237,7 @@ export default function ImportPage({
           software_name: rowData.software_name,
           vendor_name: rowData.vendor_name,
           category: rowData.category,
+          product_description: rowData.product_description || null,
           total_annual_cost: parseFloat(rowData.total_annual_cost) || 0,
           total_licenses: parseInt(rowData.total_licenses) || 0,
           active_users: parseInt(rowData.active_users) || 0,
@@ -496,7 +500,7 @@ export default function ImportPage({
                 total_annual_cost, total_licenses, active_users, license_type, renewal_date
               </p>
               <p>
-                <strong>Optional fields:</strong> contract_start_date, contract_end_date
+                <strong>Optional fields:</strong> product_description, contract_start_date, contract_end_date
               </p>
               <p>
                 <strong>Date format:</strong> MM/DD/YYYY (e.g., 12/31/2025)

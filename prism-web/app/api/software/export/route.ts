@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
         s.software_name as "Software Name",
         s.vendor_name as "Vendor",
         s.category as "Category",
+        s.product_description as "Product Description",
         s.subcategory as "Subcategory",
         s.license_type as "License Type",
         COALESCE(s.total_annual_cost, 0) as "Annual Cost",

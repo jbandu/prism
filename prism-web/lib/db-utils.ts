@@ -192,6 +192,7 @@ export async function createSoftware(data: {
   software_name: string;
   vendor_name: string;
   category: string;
+  product_description?: string;
   total_annual_cost: number;
   total_licenses: number;
   active_users: number;
@@ -201,12 +202,12 @@ export async function createSoftware(data: {
   const result = await sql`
     INSERT INTO software (
       company_id, software_name, vendor_name, category,
-      total_annual_cost, total_licenses, active_users,
+      product_description, total_annual_cost, total_licenses, active_users,
       license_type, renewal_date, contract_status
     )
     VALUES (
       ${data.company_id}, ${data.software_name}, ${data.vendor_name},
-      ${data.category}, ${data.total_annual_cost}, ${data.total_licenses},
+      ${data.category}, ${data.product_description || null}, ${data.total_annual_cost}, ${data.total_licenses},
       ${data.active_users}, ${data.license_type}, ${data.renewal_date}, 'active'
     )
     RETURNING *

@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
             software_name,
             vendor_name,
             category,
+            product_description,
             total_annual_cost,
             total_licenses,
             active_users,
@@ -93,6 +94,7 @@ export async function POST(request: NextRequest) {
             ${item.software_name},
             ${item.vendor_name},
             ${item.category},
+            ${item.product_description || null},
             ${totalAnnualCost},
             ${totalLicenses},
             ${activeUsers},
@@ -109,6 +111,7 @@ export async function POST(request: NextRequest) {
           ON CONFLICT (company_id, software_name, vendor_name)
           DO UPDATE SET
             category = EXCLUDED.category,
+            product_description = COALESCE(EXCLUDED.product_description, software.product_description),
             total_annual_cost = EXCLUDED.total_annual_cost,
             total_licenses = EXCLUDED.total_licenses,
             active_users = EXCLUDED.active_users,

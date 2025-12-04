@@ -23,6 +23,7 @@ export interface Software {
   software_name: string;
   vendor_name: string;
   category: string;
+  product_description?: string; // Description of the software for analysis context and LLM queries
   total_annual_cost: number | string; // Neon returns NUMERIC as string
   total_licenses: number;
   active_users: number;
@@ -214,6 +215,7 @@ export interface CreateSoftwareRequest {
   software_name: string;
   vendor_name: string;
   category: string;
+  product_description?: string;
   total_annual_cost: number;
   total_licenses: number;
   active_users: number;
@@ -225,6 +227,7 @@ export interface UpdateSoftwareRequest {
   software_name?: string;
   vendor_name?: string;
   category?: string;
+  product_description?: string;
   total_annual_cost?: number;
   total_licenses?: number;
   active_users?: number;

@@ -278,6 +278,12 @@ export default function SoftwareDetailPage({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {software.product_description && (
+                <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">Product Description</p>
+                  <p className="text-gray-900">{software.product_description}</p>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Software Name</p>
