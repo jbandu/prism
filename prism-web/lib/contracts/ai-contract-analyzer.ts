@@ -1,5 +1,4 @@
 import OpenAI from 'openai';
-import * as pdfParse from 'pdf-parse';
 
 // Lazy initialization to avoid build-time errors
 let openai: OpenAI | null = null;
@@ -74,8 +73,9 @@ export interface RiskAlert {
  */
 export async function parsePDFContract(fileBuffer: Buffer): Promise<string> {
   try {
-    const parser = (pdfParse as any).default || pdfParse;
-    const data = await parser(fileBuffer);
+    // Use require() to avoid build-time issues with ESM/CJS interop
+    const pdfParse = require('pdf-parse');
+    const data = await pdfParse(fileBuffer);
     return data.text;
   } catch (error) {
     console.error('PDF parsing error:', error);

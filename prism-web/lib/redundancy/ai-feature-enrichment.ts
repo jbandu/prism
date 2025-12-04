@@ -1,16 +1,27 @@
 /**
  * AI-Powered Feature Enrichment System
- * Uses Ollama (local LLM) to extract detailed features from software products
- * Cost: $0.00 per software (local inference)
+ * Uses OpenAI (production) or Ollama (local dev) to extract detailed features from software products
+ * Cost: ~$0.001 per software with OpenAI gpt-4o-mini, $0.00 with local Ollama
  */
 
 import { neon } from '@neondatabase/serverless';
+import OpenAI from 'openai';
 
 const sql = neon(process.env.DATABASE_URL!);
 
-// Ollama API configuration
+// OpenAI API configuration (fallback to Ollama for local dev)
+const USE_OPENAI = process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.startsWith('sk-');
 const OLLAMA_API = process.env.OLLAMA_API_URL || 'http://localhost:11434/api/generate';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.1:8b';
+
+// Lazy init OpenAI client
+let openaiClient: OpenAI | null = null;
+function getOpenAI(): OpenAI {
+  if (!openaiClient && USE_OPENAI) {
+    openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return openaiClient!;
+}
 
 // Comprehensive feature taxonomy for SaaS products
 export const SAAS_FEATURE_TAXONOMY = {
@@ -356,7 +367,7 @@ interface SoftwareFeatureExtraction {
 }
 
 /**
- * Call Ollama to extract features from software description
+ * Call OpenAI or Ollama to extract features from software description
  */
 async function extractFeaturesWithAI(
   softwareName: string,
@@ -388,26 +399,51 @@ Examples:
 Now extract features for ${softwareName}:`;
 
   try {
-    const response = await fetch(OLLAMA_API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: OLLAMA_MODEL,
-        prompt,
-        stream: false,
-        options: {
+    let text = '';
+
+    // Try OpenAI first if available (works on Vercel)
+    if (USE_OPENAI) {
+      try {
+        const response = await getOpenAI().chat.completions.create({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a SaaS software expert. Return only valid JSON arrays.',
+            },
+            { role: 'user', content: prompt },
+          ],
           temperature: 0.2,
-          num_predict: 512,
-        },
-      }),
-    });
+          max_tokens: 512,
+        });
+        text = response.choices[0]?.message?.content || '';
+      } catch (openaiError) {
+        console.error('OpenAI API failed, falling back to Ollama:', openaiError);
+        throw openaiError; // Fall through to Ollama
+      }
+    } else {
+      // Use Ollama for local development
+      const response = await fetch(OLLAMA_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: OLLAMA_MODEL,
+          prompt,
+          stream: false,
+          options: {
+            temperature: 0.2,
+            num_predict: 512,
+          },
+        }),
+      });
 
-    if (!response.ok) {
-      throw new Error(`Ollama API error: ${response.statusText}`);
+      if (!response.ok) {
+        throw new Error(`Ollama API error: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      text = result.response || '';
     }
-
-    const result = await response.json();
-    const text = result.response || '';
 
     // Extract JSON array from response
     const jsonMatch = text.match(/\[[\s\S]*?\]/);
