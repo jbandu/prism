@@ -17,12 +17,20 @@ import {
   Brain,
   Globe,
   TrendingDown,
-  Sparkles
+  Sparkles,
+  Store,
+  Users,
+  Target,
+  LineChart,
+  Megaphone,
+  BadgeCheck,
+  ShieldCheck
 } from "lucide-react";
 
 interface SidebarProps {
-  type: "admin" | "company";
+  type: "admin" | "company" | "vendor";
   companyId?: string;
+  vendorId?: string;
 }
 
 const adminLinks = [
@@ -37,12 +45,55 @@ const adminLinks = [
     icon: Building2,
   },
   {
+    href: "/admin/vendors",
+    label: "Vendors",
+    icon: Store,
+  },
+  {
     href: "/admin/analytics",
     label: "Analytics",
     icon: BarChart3,
   },
   {
     href: "/admin/settings",
+    label: "Settings",
+    icon: Settings,
+  },
+];
+
+const vendorLinks = (vendorId: string) => [
+  {
+    href: `/vendor/${vendorId}/overview`,
+    label: "Overview",
+    icon: LayoutDashboard,
+  },
+  {
+    href: `/vendor/${vendorId}/customers`,
+    label: "My Customers",
+    icon: Users,
+  },
+  {
+    href: `/vendor/${vendorId}/prospects`,
+    label: "Prospects",
+    icon: Target,
+  },
+  {
+    href: `/vendor/${vendorId}/intelligence`,
+    label: "Market Intelligence",
+    icon: LineChart,
+  },
+  {
+    href: `/vendor/${vendorId}/campaigns`,
+    label: "Offers & Campaigns",
+    icon: Megaphone,
+  },
+  {
+    href: `/vendor/${vendorId}/profile`,
+    label: "Vendor Profile",
+    icon: BadgeCheck,
+  },
+  {
+    href: `/vendor/${vendorId}/settings`,
     label: "Settings",
     icon: Settings,
   },
@@ -106,10 +157,23 @@ const companyLinks = (companyId: string) => [
   },
 ];
 
-export function Sidebar({ type, companyId }: SidebarProps) {
+export function Sidebar({ type, companyId, vendorId }: SidebarProps) {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const links = type === "admin" ? adminLinks : companyLinks(companyId || "");
+
+  const getLinks = () => {
+    switch (type) {
+      case "admin":
+        return adminLinks;
+      case "vendor":
+        return vendorLinks(vendorId || "");
+      case "company":
+      default:
+        return companyLinks(companyId || "");
+    }
+  };
+
+  const links = getLinks();
 
   // Determine home link based on user session and context
   const getHomeLink = () => {
@@ -119,10 +183,19 @@ export function Sidebar({ type, companyId }: SidebarProps) {
 
     const userRole = (session.user as any).role;
     const userCompanySlug = (session.user as any).companySlug;
+    const userVendorSlug = (session.user as any).vendorSlug;
 
     // If user is admin, go to admin dashboard
     if (userRole === "admin") {
       return "/admin/dashboard";
+    }
+
+    // If user is a vendor user, go to their vendor portal
+    if (userRole === "vendor_admin" || userRole === "vendor_member") {
+      const targetVendorSlug = vendorId || userVendorSlug;
+      if (targetVendorSlug) {
+        return `/vendor/${targetVendorSlug}/overview`;
+      }
     }
 
     // If user is company_manager or viewer, go to their company's dashboard
